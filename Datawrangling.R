@@ -11,6 +11,27 @@ library(tidyr)
 library(dplyr)
 library(moments)
 library(psych)
+library(RISEkbmRasch)
+
+library(grateful)
+library(ggrepel)
+library(car)
+library(kableExtra)
+library(readxl)
+library(tidyverse)
+library(eRm)
+library(iarm)
+library(mirt)
+library(psych)
+library(ggplot2)
+library(psychotree)
+library(matrixStats)
+library(reshape)
+library(knitr)
+library(patchwork)
+library(formattable) 
+library(glue)
+library(foreach)
 
 # Create custom functions -------------------------------------------------
 
@@ -163,9 +184,21 @@ data$BDI_18 <- ifelse(data$BDI_18 == 1, 0,
 
 data$BDI_total = rowSums(data[, grep("BDI_", colnames(data))], na.rm = TRUE)
 
+#BDI Gruppierung
 
+# Erstellen der Gruppen basierend auf dem BDI_total Score
+data$BDI_Group <- cut(data$BDI_total, 
+                      breaks = c(-Inf, 13, 19, 28, Inf), 
+                      labels = c("Group0: no depression / clinical irrelevant", 
+                                 "Group1: mild depression", 
+                                 "Group2: moderate depression", 
+                                 "Group3: severe depression"), 
+                      right = TRUE)
 
-# MINI Grouping
+table(data$BDI_Group)
+data$BDI_total
+
+# MINBDI_total# MINI Grouping
 
 data[, grep("^MINI_", colnames(data))] <- 
   lapply(data[, grep("^MINI_", colnames(data))], function(x) ifelse(x == 1, 0, ifelse(x == 2, 1, x)))
@@ -210,9 +243,11 @@ data$MINI_Group <- factor(data$MINI_Group, levels = c("Group0: No history of MDE
 # WHOQOL_bref
 
 # Umkodierung der WHOQOL_3, WHOQOL_4 und WHOQOL_26 mit recode()
-data$WHOQOL_3 <- recode(data$WHOQOL_3, `1` = 5, `2` = 4, `3` = 3, `4` = 2, `5` = 1)
-data$WHOQOL_4 <- recode(data$WHOQOL_4, `1` = 5, `2` = 4, `3` = 3, `4` = 2, `5` = 1)
-data$WHOQOL_26 <- recode(data$WHOQOL_26, `1` = 5, `2` = 4, `3` = 3, `4` = 2, `5` = 1)
+data$WHOQOL_3 <- dplyr::recode(data$WHOQOL_3, `1` = 5, `2` = 4, `3` = 3, `4` = 2, `5` = 1)
+data$WHOQOL_4 <- dplyr::recode(data$WHOQOL_4, `1` = 5, `2` = 4, `3` = 3, `4` = 2, `5` = 1)
+data$WHOQOL_26 <- dplyr::recode(data$WHOQOL_26, `1` = 5, `2` = 4, `3` = 3, `4` = 2, `5` = 1)
+
+
 
 # Berechnung der 4 WHOQOL-Domains (Konvertiert 0 - 100)
 
@@ -235,7 +270,23 @@ data$WHOQOL_total <- rowMeans(data[, c("WHOQOL_Physical_Health_Converted", "WHOQ
 
 # PWB
 
-#TBA
+data$PWB_1 <- dplyr::recode(data$PWB_1, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+data$PWB_3 <- dplyr::recode(data$PWB_3, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+data$PWB_5 <- dplyr::recode(data$PWB_5, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+data$PWB_6 <- dplyr::recode(data$PWB_6, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+data$PWB_8 <- dplyr::recode(data$PWB_8, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+data$PWB_10 <- dplyr::recode(data$PWB_10, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+data$PWB_11 <- dplyr::recode(data$PWB_11, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+data$PWB_14 <- dplyr::recode(data$PWB_14, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+
+data$PWB_Autonomy = rowSums(data[,c("PWB_1", "PWB_9", "PWB_17")])
+data$PWB_Environmental_Mastery = rowSums(data[,c("PWB_2", "PWB_11", "PWB_18")])
+data$PWB_Personal_Growth = rowSums(data[,c("PWB_4", "PWB_12", "PWB_14")])
+data$PWB_Rositive_Relations = rowSums(data[,c("PWB_5", "PWB_10", "PWB_13")])
+data$PWB_Purpose_of_life = rowSums(data[,c("PWB_6", "PWB_8", "PWB_15")])
+data$PWB_Self_Acceptance = rowSums(data[,c("PWB_3", "PWB_7", "PWB_16")])
+
+data$PWB_total = rowSums(data[,c("PWB_Autonomy", "PWB_Environmental_Mastery", "PWB_Personal_Growth","PWB_Rositive_Relations","PWB_Purpose_of_life", "PWB_Self_Acceptance"  )])
 
 # CDRISC
 
@@ -307,14 +358,232 @@ data$BSI_Zusatz <- rowSums(data[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na
 
 
 
+# Question 2 Rasch---------------------------------------------------------------
+
+select <- dplyr::select
+count <- dplyr::count
+recode <- car::recode
+rename <- dplyr::rename
+
+#ES_likert
+
+#select data
+
+df <- data %>% 
+  select(starts_with("ES_likert_"),
+         age,sex)  %>% 
+  select(!ES_likert_total) %>% 
+  select(!ES_likert_WHO)
+
+glimpse(df)
+
+itemlabels <- df %>% 
+  select(starts_with("ES_likert_")) %>% 
+  names() %>% 
+  as_tibble() %>% 
+  separate(value, c(NA, "item"), sep ="_[0-9][0-9]_") %>% 
+  mutate(itemnr = paste0("ES_likert_",c(1:10)), .before = "item")
+
+#remove non-binär
+
+df <- df %>% 
+  filter(sex %in% c("männlich","weiblich"))
+
+#Vektor for sex
+dif.sex <- factor(df$sex)
+
+#and remove from df
+df$sex <- NULL
+
+#schöne tabelle mit percent
+RIdemographics(dif.sex, "Sex")
+
+#weiter mit age
+glimpse(df$age)
+
+#Erstelle ggplot für Altersverteilung
+ggplot(df) +
+  geom_histogram(aes(x = age), 
+                 fill = "#009ca6",
+                 col = "black") +
+  # add the average as a vertical line
+  geom_vline(xintercept = mean(df$age), 
+             linewidth = 1.5,
+             linetype = 2,
+             col = "orange") +
+  # add a light grey field indicating the standard deviation
+  annotate("rect", ymin = 0, ymax = Inf, 
+           xmin = (mean(df$age, na.rm = TRUE) - sd(df$age, na.rm = TRUE)), xmax = (mean(df$age, na.rm = TRUE) + sd(df$age, na.rm = TRUE)), 
+           alpha = .2) +
+  labs(title = "",
+       x = "Age in years",
+       y = "Number of respondents",
+       caption = glue("Note. Mean age is {round(mean(df$age, na.rm = T),1)} years with a standard deviation of {round(sd(df$age, na.rm = T),1)}. Age range is {min(df$age)} to {max(df$age)}.")
+  ) +
+  theme(plot.caption = element_text(hjust = 0, face = "italic"))
+
+#remove age from df
+dif.age <- df$age
+df$age <- NULL
+
+#check for missing data
+RImissing(df)
+
+#check overall responses
+RIallresp(df)
+
+#check for floor / ceiling effects
+RIrawdist(df)
+
+#While not really necessary, it could be interesting to see whether the response patterns follow a 
+#Guttman-like structure. Items and persons are sorted based on lower->higher responses, 
+#and we should see the color move from yellow in the lower left corner to blue in the upper right corner.
+
+RIheatmap(df) +
+  theme(axis.text.x = element_blank())
+
+#It is usually recommended to have at least ~10 responses 
+#in each category for psychometric analysis, no matter which methodology is used.
+
+RItileplot(df)
+
+# item fit 
+simfit1 <- RIgetfit(df, iterations = 1000, cpu = 8) 
+RIitemfit(df, simfit1)
+
+# residual correlations
+simcor1 <- RIgetResidCor(df, iterations = 1000, cpu = 8)
+RIresidcorr(df, cutoff = simcor1$p99)
+
+#PCA of residuals
+RIpcmPCA(df)
+
+#loadings on first residuals contrast
+RIloadLoc(df)
+
+#split data frame
+df2 = df[,1:5]
+
+# item fit 
+simfit1 <- RIgetfit(df2, iterations = 1000, cpu = 8) 
+RIitemfit(df2, simfit1)
+
+# residual correlations
+simcor1 <- RIgetResidCor(df2, iterations = 1000, cpu = 8)
+RIresidcorr(df2, cutoff = simcor1$p99)
+
+#PCA of residuals
+RIpcmPCA(df2)
+
+#loadings on first residuals contrast
+RIloadLoc(df2)
+
+RIitemCats(df2, xlims = c(-5,5))
+
+
+# Other package (https://pgmj.github.io/simcutoffs.html)
+
+simres1 <- RIgetResidCor(df2, iterations = 1000, cpu = 8)
+
+glimpse(simres1)
+
+RIresidcorr(df2, cutoff = simres1$p99)
+
+hist(simres1$results$diff, breaks = 50, col = "lightblue")
+abline(v = simres1$p99, col = "red")
+abline(v = simres1$p95, col = "orange")
+
+simfit1 <- RIgetfit(df2, iterations = 1000, cpu = 8)
+simfit1[[1]]
 
 
 
+RIgetfitPlot(simfit1, df2)
+
+library(RASCHplot) 
+CICCplot(PCM(df2), which.item = 3)
+
+
+# Question 3 ---------------------------------------------------------------
+
+
+# Question 4 ---------------------------------------------------------------
+
+
+# Question 5 ---------------------------------------------------------------
+
+#dichtotom
+model = lm(ES_total ~ MINI_Group, data = data)
+anova(model)
+
+emmeans::emmeans(model, pairwise ~ MINI_Group)
+
+#likert
+model = lm(ES_likert_total ~ MINI_Group, data = data)
+anova(model)
+
+emmeans::emmeans(model, pairwise ~ MINI_Group)
+
+# Question 6 ---------------------------------------------------------------
+
+#dichtotom
+model = lm(ES_total ~ BDI_Group, data = data)
+anova(model)
+
+emmeans::emmeans(model, pairwise ~ BDI_Group)
+
+#likert
+model = lm(ES_likert_total ~ BDI_Group, data = data)
+anova(model)
+
+emmeans::emmeans(model, pairwise ~ BDI_Group)
+
+# Question 7 ---------------------------------------------------------------
+
+
+# Question 8 ---------------------------------------------------------------
+
+
+# Question 9 ---------------------------------------------------------------
+
+#dichotom
+model = lm(GSI ~ ES_total, data)
+summary(model)
+
+#likert
+
+model = lm(GSI ~ ES_likert_total, data)
+summary(model)
+
+
+# Question 10 ---------------------------------------------------------------
+
+
+model1 = lm(PWB_total ~ WHO_total, data)
+model2 = lm(PWB_total ~ WHO_total + ES_likert_total, data)
+
+anova(model1,model2)
+
+summary(model1)
+summary(model2)
 
 view(data)
 
+cor(data$PWB_Autonomy,data$ES_likert_total)
+
+plot(data$PWB_total~data$ES_likert_total)
+plot(data$PWB_Autonomy~data$ES_likert_total)
+plot(data$PWB_Environmental_Mastery~data$ES_likert_total)
+
+PWB_Autonomy
+PWB_Environmental_Mastery
+
+# Komische korrelation zu PWB!!! Anschauen warum? Richtig codiert?
+
 
 cor.test(data$ES_likert_WHO, data$WHO_total)
+
+
 
 #stelle des Fragebogens weiter hinten -> negativer weil davor negative Fragebögen abgefragt wurden 
 # oder beeinflussen die ersten 5 Fragen der ES die Antwort?
