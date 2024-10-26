@@ -95,7 +95,7 @@ df <- df %>%
 RIallresp(df)
 
 
-simfit1 <- RIgetfit(df, iterations = 1000, cpu = 8) # save simulation output to object `simfit1`
+simfit1 <- RIgetfit(df, iterations = 10, cpu = 8) # save simulation output to object `simfit1`
 RIitemfit(df, simfit1)
 
 View(RItargeting)

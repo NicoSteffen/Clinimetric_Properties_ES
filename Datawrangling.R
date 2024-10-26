@@ -12,13 +12,12 @@ library(dplyr)
 library(moments)
 library(psych)
 library(RISEkbmRasch)
-
+library(pROC)
 library(grateful)
 library(ggrepel)
 library(car)
 library(kableExtra)
 library(readxl)
-library(tidyverse)
 library(eRm)
 library(iarm)
 library(mirt)
@@ -538,8 +537,29 @@ anova(model)
 
 emmeans::emmeans(model, pairwise ~ BDI_Group)
 
-# Question 7 ---------------------------------------------------------------
+# Question 7 Cut off Score---------------------------------------------------------------
 
+
+# Create binary variable for MDE based on BDI cutoff
+data$MDE <- ifelse(data$BDI_total >= 13, 1, 0)
+
+# Perform ROC analysis
+roc_result <- roc(data$MDE, data$ES_total)
+
+# Plot ROC curve
+plot(roc_result, main="ROC Curve for ES Cutoff")
+
+# Determine optimal cutoff using Youden's J statistic
+optimal_cutoff <- coords(roc_result, "best", ret = "threshold", best.method = "youden")
+
+# Print the optimal cutoff
+print(optimal_cutoff)
+
+cutoff_data <- data.frame(
+  Threshold = roc_result$thresholds,
+  Sensitivity = roc_result$sensitivities,
+  Specificity = roc_result$specificities
+)
 
 # Question 8 ---------------------------------------------------------------
 
@@ -579,6 +599,154 @@ PWB_Autonomy
 PWB_Environmental_Mastery
 
 # Komische korrelation zu PWB!!! Anschauen warum? Richtig codiert?
+
+
+
+# Question 11 -------------------------------------------------------------
+
+
+
+# Question 12 Correlation Analyses-------------------------------------------------------------
+
+#Überlegung: Correlation Analyses with subscales or total WHOQOL, PWB? 
+cor.df <- data[, c("ES_total", "ES_likert_total", "GSI", "WHOQOL_total", "CDRISC_total", "PWB_total", "BDI_total")]
+
+#hier mit Subscales:
+cor.df <- data[, c("ES_total", "ES_likert_total", "GSI", "BDI_total", "WHOQOL_Physical_Health_Converted", "WHOQOL_Psychological_Converted",
+                   "WHOQOL_Social_Relationships_Converted", "WHOQOL_Environment_Converted", "WHOQOL_total",
+                   "CDRISC_total", "PWB_Autonomy","PWB_Environmental_Mastery","PWB_Personal_Growth","PWB_Rositive_Relations",
+                   "PWB_Purpose_of_life","PWB_Self_Acceptance", "PWB_total")]
+
+descriptive_stats <- data.frame(
+  Variable = c("ES", "ES_likert", "GSI", "BDI", "Physical Health", "Psychological", "Social Relationships", "Environment", "WHOQOL_total",
+               "CDRISC", "Autonomy", "Environmental Mastery", "Personal Growth", "Positive Relations", "Purpose of life", "Self Acceptance",
+               "PWB"),
+  M = sapply(cor.df, mean, na.rm = TRUE),
+  SD = sapply(cor.df, sd, na.rm = TRUE),
+  Skew = sapply(cor.df, skewness, na.rm = TRUE),
+  Kurtosis = sapply(cor.df, kurtosis, na.rm = TRUE)
+)
+
+# Erstellen der Datensätze für die einzelnen Fragebögen
+
+# data_ES: Nur die ES_ Variablen (ohne ES_likert)
+data_ES <- data[, grep("^ES_[0-9]+$", colnames(data))]
+
+# data_ES_likert: Nur die ES_likert Variablen
+data_ES_likert <- data[, grep("^ES_likert_[0-9]+$", colnames(data))]
+
+# data_GSI: Nur die BSI_ Variablen
+data_GSI <- data[, grep("^BSI_[0-9]+$", colnames(data))]
+
+# data_BDI: Nur die BDI_ Variablen
+data_BDI <- data[, grep("^BDI_[0-9]+$", colnames(data))]
+
+# data_WHOQOL: Nur die WHOQOL_ Variablen
+data_WHOQOL <- data[, grep("^WHOQOL_[0-9]+$", colnames(data))]
+
+# data_CDRISC: Nur die CDRISC_ Variablen
+data_CDRISC <- data[, grep("^CDRISC_[0-9]+$", colnames(data))]
+
+# data_PWB: Nur die PWB_ Variablen
+data_PWB <- data[, grep("^PWB_[0-9]+$", colnames(data))]
+
+# PWB-Dimensionen
+data_PWB_Autonomy <- data[, c("PWB_1", "PWB_9", "PWB_17")]
+data_PWB_Environmental_Mastery <- data[, c("PWB_2", "PWB_11", "PWB_18")]
+data_PWB_Personal_Growth <- data[, c("PWB_4", "PWB_12", "PWB_14")]
+data_PWB_Positive_Relations <- data[, c("PWB_5", "PWB_10", "PWB_13")]
+data_PWB_Purpose_of_Life <- data[, c("PWB_6", "PWB_8", "PWB_15")]
+data_PWB_Self_Acceptance <- data[, c("PWB_3", "PWB_7", "PWB_16")]
+
+# WHOQOL-Dimensionen
+data_WHOQOL_Physical_Health <- data[, c("WHOQOL_3", "WHOQOL_4", "WHOQOL_10", "WHOQOL_15", "WHOQOL_16", "WHOQOL_17", "WHOQOL_18")]
+data_WHOQOL_Psychological <- data[, c("WHOQOL_5", "WHOQOL_6", "WHOQOL_7", "WHOQOL_11", "WHOQOL_19", "WHOQOL_26")]
+data_WHOQOL_Social_Relationships <- data[, c("WHOQOL_20", "WHOQOL_21", "WHOQOL_22")]
+data_WHOQOL_Environment <- data[, c("WHOQOL_8", "WHOQOL_9", "WHOQOL_12", "WHOQOL_13", "WHOQOL_14", "WHOQOL_23", "WHOQOL_24", "WHOQOL_25")]
+
+
+
+# Berechnung von Cronbach's Alpha-Werten wie zuvor
+ES_alpha <- alpha(data_ES)$total$raw_alpha
+ES_likert_alpha <- alpha(data_ES_likert)$total$raw_alpha
+GSI_alpha <- alpha(data_GSI)$total$raw_alpha
+BDI_alpha <- alpha(data_BDI)$total$raw_alpha
+Physical_Health_alpha <- WHOQOL_Physical_Health_alpha
+Psychological_alpha <- WHOQOL_Psychological_alpha
+Social_Relationships_alpha <- WHOQOL_Social_Relationships_alpha
+Environment_alpha <- WHOQOL_Environment_alpha
+WHOQOL_total_alpha <- WHOQOL_alpha
+CDRISC_alpha <- alpha(data_CDRISC)$total$raw_alpha
+Autonomy_alpha <- PWB_Autonomy_alpha
+Environmental_Mastery_alpha <- PWB_Environmental_Mastery_alpha
+Personal_Growth_alpha <- PWB_Personal_Growth_alpha
+Positive_Relations_alpha <- PWB_Positive_Relations_alpha
+Purpose_of_Life_alpha <- PWB_Purpose_of_Life_alpha
+Self_Acceptance_alpha <- PWB_Self_Acceptance_alpha
+PWB_alpha <- alpha(data_PWB)$total$raw_alpha
+
+# Erstellen der Alpha-Spalte in der Tabelle
+descriptive_stats$Alpha <- c(ES_alpha, ES_likert_alpha, GSI_alpha, BDI_alpha, 
+                             Physical_Health_alpha, Psychological_alpha, 
+                             Social_Relationships_alpha, Environment_alpha, 
+                             WHOQOL_total_alpha, CDRISC_alpha, 
+                             Autonomy_alpha, Environmental_Mastery_alpha, 
+                             Personal_Growth_alpha, Positive_Relations_alpha, 
+                             Purpose_of_Life_alpha, Self_Acceptance_alpha, 
+                             PWB_alpha)
+
+# Zeige die fertige Tabelle an
+descriptive_stats
+
+# Calculate Pearson correlations for the specified variables
+correlation_matrix <- cor(cor.df, use = "pairwise.complete.obs")
+correlation_matrix <- as.data.frame(correlation_matrix)
+
+# Combine all information into the final table
+final_table <- descriptive_stats
+final_table$ES_total <- correlation_matrix$ES_total
+final_table$ES_likert_total <- correlation_matrix$ES_likert_total
+final_table$GSI <- correlation_matrix$GSI
+final_table$BDI_total <- correlation_matrix$BDI_total
+final_table$WHOQOL_Physical_Health_Converted <- correlation_matrix$WHOQOL_Physical_Health_Converted
+final_table$WHOQOL_Psychological_Converted <- correlation_matrix$WHOQOL_Psychological_Converted
+final_table$WHOQOL_Social_Relationships_Converted <- correlation_matrix$WHOQOL_Social_Relationships_Converted
+final_table$WHOQOL_Environment_Converted <- correlation_matrix$WHOQOL_Environment_Converted
+final_table$WHOQOL_total <- correlation_matrix$WHOQOL_total
+final_table$CDRISC_total <- correlation_matrix$CDRISC_total
+final_table$PWB_Autonomy <- correlation_matrix$PWB_Autonomy
+final_table$PWB_Environmental_Mastery <- correlation_matrix$PWB_Environmental_Mastery
+final_table$PWB_Personal_Growth <- correlation_matrix$PWB_Personal_Growth
+final_table$PWB_Rositive_Relations <- correlation_matrix$PWB_Rositive_Relations
+final_table$PWB_Purpose_of_life <- correlation_matrix$PWB_Purpose_of_life
+final_table$PWB_Self_Acceptance <- correlation_matrix$PWB_Self_Acceptance
+final_table$PWB_total <- correlation_matrix$PWB_total
+
+# Round all numeric values in the final table
+final_table <- roundallnumerics(final_table, 2)
+
+# Calculate p-values with Hmisc package
+correlation_results <- Hmisc::rcorr(as.matrix(cor.df))
+p_values_matrix <- correlation_results$P
+p_values_df <- as.data.frame(p_values_matrix)
+
+# Apply Benjamini-Hochberg correction
+p_values_vector <- as.vector(p_values_matrix)
+p_values_bh <- p.adjust(p_values_vector, method = "BH")
+
+# Reshape corrected p-values back into a matrix form and convert to data frame
+p_values_bh_matrix <- matrix(p_values_bh, ncol = ncol(p_values_df), nrow = nrow(p_values_df))
+p_values_bh_df <- as.data.frame(p_values_bh_matrix)
+
+# Print the corrected p-values data frame
+print(p_values_bh_df)
+
+
+
+
+
+
+
 
 
 cor.test(data$ES_likert_WHO, data$WHO_total)
