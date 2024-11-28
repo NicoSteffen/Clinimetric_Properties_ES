@@ -357,6 +357,8 @@ data$BSI_Zusatz <- rowSums(data[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na
 
 
 
+
+
 # Question 2 Rasch---------------------------------------------------------------
 
 select <- dplyr::select
@@ -560,6 +562,13 @@ cutoff_data <- data.frame(
   Sensitivity = roc_result$sensitivities,
   Specificity = roc_result$specificities
 )
+
+
+
+
+
+
+
 
 # Question 8 ---------------------------------------------------------------
 
@@ -957,12 +966,11 @@ correlation_results_whoqol <- Hmisc::rcorr(as.matrix(cor.whoqol))
 p_values_matrix_whoqol <- correlation_results_whoqol$P
 p_values_df_whoqol <- as.data.frame(p_values_matrix_whoqol)
 
-
-
 # Calculate p-values 3rd table
 correlation_results_df <- Hmisc::rcorr(as.matrix(cor.df))
 p_values_matrix_df <- correlation_results_df$P
 p_values_df_df <- as.data.frame(p_values_matrix_df)
+
 
 
 
@@ -1018,3 +1026,52 @@ model2 = lm(BDI_total ~ ES_likert_total, data = data)
 summary(model2)
 
 
+
+
+
+
+# Faktorenanalyse ---------------------------------------------------------
+
+
+# Perform parallel analysis
+fa.parallel(data_ES_likert, fa = "fa", n.iter = 100, show.legend = TRUE, main = "Parallel Analysis")
+
+
+
+data_ES
+data_ES_likert
+
+
+efa_result <- fa(data_ES_likert, nfactors = 2, rotate = "promax")
+
+
+
+
+# Define the model
+model2 <- '
+  Factor1 =~ ES_1 + ES_2 + ES_3 + ES_4 + ES_5
+  Factor2 =~ ES_6 + ES_7 + ES_8 + ES_9 + ES_10
+'
+
+# Assuming 'data' contains your items
+cfa_result2 <- cfa(model2, data = data_ES)
+
+# Summarize the results
+summary(cfa_result2, fit.measures = TRUE, standardized = TRUE)
+
+
+# Define the model
+model <- '
+  Factor1 =~ ES_likert_1 + ES_likert_2 + ES_likert_3 + ES_likert_4 + ES_likert_5
+  Factor2 =~ ES_likert_6 + ES_likert_7 + ES_likert_8 + ES_likert_9 + ES_likert_10
+'
+
+# Assuming 'data' contains your items
+cfa_result <- cfa(model, data = data_ES_likert)
+
+# Summarize the results
+summary(cfa_result, fit.measures = TRUE, standardized = TRUE)
+
+
+model = lm(BDI_total ~ ES_likert_total, data)
+summary(model)
