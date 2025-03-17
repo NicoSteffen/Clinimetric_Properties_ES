@@ -85,6 +85,8 @@ data[data$id == 4, grep("^ES_", colnames(data))] <-
 data[data$id == 4, grep("^MINI_current_|^MINI_past_", colnames(data))] <- 
   lapply(data[data$id == 4, grep("^MINI_", colnames(data))], function(x) ifelse(x == 1, 2, ifelse(x == 2, 1, x)))
 
+#remove ID with missing data
+data <- data[data$Teilnahmeerklaerung != 2, ]
 
 
 # sample characteristics --------------------------------------------------
@@ -355,8 +357,8 @@ data$BSI_Psychotizismus <- rowSums(data[, c("BSI_3", "BSI_14", "BSI_34", "BSI_44
 # Zusatzskala
 data$BSI_Zusatz <- rowSums(data[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na.rm = TRUE)
 
-
-
+# Datensatz clean speichern 
+write.csv2(data, file = "clean.csv", row.names = FALSE)
 
 
 # Question 2 Rasch---------------------------------------------------------------
@@ -463,11 +465,12 @@ RIpcmPCA(df)
 RIloadLoc(df)
 
 #split data frame
-df2 = df[,1:5]
+df1 = df[,1:5]
+df2 = df[,6:10]
 
 # item fit 
-simfit1 <- RIgetfit(df2, iterations = 1000, cpu = 8) 
-RIitemfit(df2, simfit1)
+simfit1 <- RIgetfit(df1, iterations = 1000, cpu = 8) 
+RIitemfit(df1, simfit1)
 
 # residual correlations
 simcor1 <- RIgetResidCor(df2, iterations = 1000, cpu = 8)
@@ -563,12 +566,25 @@ cutoff_data <- data.frame(
   Specificity = roc_result$specificities
 )
 
+# Alternative mit MINI
 
+data$MDE_MINI <- ifelse(data$Mini_current_MDE == "MDE", 1, 0)
 
+# Perform ROC analysis
+roc_result <- roc(data$MDE_MINI, data$ES_total)
 
+# Plot ROC curve
+plot(roc_result, main="ROC Curve for ES Cutoff")
 
+# Determine optimal cutoff using Youden's J statistic
+optimal_cutoff <- coords(roc_result, "best", ret = "threshold", best.method = "youden")
 
+# Print the optimal cutoff
+print(optimal_cutoff)
 
+test = data.frame(data$MDE, data$MDE_MINI)
+
+#--> Weniger Diagnosen MDE nach MINI als BDI
 
 # Question 8 ---------------------------------------------------------------
 
@@ -643,9 +659,9 @@ descriptive_stats_whoqol <- data.frame(
 )
 
 
-# cor CDRISC, GSI, BDI, ES Lkert
+# cor CDRISC, GSI, BDI, ES Lkert, + WHOQOL Total
 
-cor.df <- data[, c("ES_total", "ES_likert_total", "GSI", "CDRISC_total", "BDI_total")]
+cor.df <- data[, c("ES_total", "ES_likert_total", "GSI", "CDRISC_total", "BDI_total", "WHOQOL_total")]
 
 descriptive_stats_df <- data.frame(
   M = sapply(cor.df, mean, na.rm = TRUE),
@@ -713,6 +729,8 @@ data_WHOQOL_Psychological <- data[, c("WHOQOL_5", "WHOQOL_6", "WHOQOL_7", "WHOQO
 data_WHOQOL_Social_Relationships <- data[, c("WHOQOL_20", "WHOQOL_21", "WHOQOL_22")]
 data_WHOQOL_Environment <- data[, c("WHOQOL_8", "WHOQOL_9", "WHOQOL_12", "WHOQOL_13", "WHOQOL_14", "WHOQOL_23", "WHOQOL_24", "WHOQOL_25")]
 
+  
+  
 alpha(data_PWB_Autonomy)
 
 
@@ -732,7 +750,7 @@ Personal_Growth_alpha <- alpha(data_PWB_Personal_Growth)$total$raw_alpha
 Positive_Relations_alpha <- alpha(data_PWB_Positive_Relations)$total$raw_alpha
 Purpose_of_Life_alpha <- alpha(data_PWB_Purpose_of_Life)$total$raw_alpha
 Self_Acceptance_alpha <- alpha(data_PWB_Self_Acceptance)$total$raw_alpha
-
+WHOQOL_alpha = alpha(data_WHOQOL)$total$raw_alpha
 
 # Erstellen der Alpha-Spalte in der Tabelle
 #descriptive_stats$Alpha <- c(ES_alpha, ES_likert_alpha, GSI_alpha, BDI_alpha, 
@@ -760,7 +778,7 @@ descriptive_stats_whoqol$Alpha = c(ES_alpha, Physical_Health_alpha, Psychologica
 # Alpha Tabelle drei
 
 descriptive_stats_df$Alpha = c(ES_alpha, ES_likert_alpha, GSI_alpha,
-                               CDRISC_alpha,BDI_alpha)
+                               CDRISC_alpha,BDI_alpha, WHOQOL_alpha)
 
 
 
@@ -798,7 +816,7 @@ final_table_df$ES_likert_total = correlation_matrix_df$ES_likert_total
 final_table_df$GSI = correlation_matrix_df$GSI
 final_table_df$CDRISC_total = correlation_matrix_df$CDRISC_total
 final_table_df$BDI_total = correlation_matrix_df$BDI_total
-
+final_table_df$WHOQOL_total = correlation_matrix_df$WHOQOL_total
 
 
 # Combine all information into the final table
@@ -920,7 +938,7 @@ final_table_df$Variable <- rownames(final_table_df)
 final_table_df <- final_table_df[, c("Variable", setdiff(names(final_table_df), "Variable"))]
 
 # Erstelle die flextable aus der Tabelle
-formatted_table_df <- flextable(final_table_df)
+formatted_table_df <- flextable::flextable(final_table_df)
 
 # Benenne die Spalten entsprechend
 formatted_table_df <- set_header_labels(
@@ -975,15 +993,15 @@ p_values_df_df <- as.data.frame(p_values_matrix_df)
 
 
 # Apply Benjamini-Hochberg correction
-#p_values_vector <- as.vector(p_values_matrix)
-#p_values_bh <- p.adjust(p_values_vector, method = "BH")
+p_values_vector <- as.vector(p_values_matrix_df)
+p_values_bh <- p.adjust(p_values_vector, method = "BH")
 
 # Reshape corrected p-values back into a matrix form and convert to data frame
-#p_values_bh_matrix <- matrix(p_values_bh, ncol = ncol(p_values_df), nrow = nrow(p_values_df))
-#p_values_bh_df <- as.data.frame(p_values_bh_matrix)
+p_values_bh_matrix <- matrix(p_values_bh, ncol = ncol(p_values_df_df), nrow = nrow(p_values_df_df))
+p_values_bh_df <- as.data.frame(p_values_bh_matrix)
 
 # Print the corrected p-values data frame
-#print(p_values_bh_df)
+print(p_values_bh_df)
 
 
 
@@ -995,7 +1013,7 @@ p_values_df_df <- as.data.frame(p_values_matrix_df)
 
 cor.test(data$ES_likert_WHO, data$WHO_total)
 
-
+t.test(data$ES_likert_WHO,data$WHO_total )
 
 #stelle des Fragebogens weiter hinten -> negativer weil davor negative Fragebögen abgefragt wurden 
 # oder beeinflussen die ersten 5 Fragen der ES die Antwort? --> Forschungsidee!!!
@@ -1034,7 +1052,7 @@ summary(model2)
 
 
 # Perform parallel analysis
-fa.parallel(data_ES_likert, fa = "fa", n.iter = 100, show.legend = TRUE, main = "Parallel Analysis")
+fa.parallel(data_ES, fa = "fa", n.iter = 100, show.legend = TRUE, main = "Parallel Analysis")
 
 
 
