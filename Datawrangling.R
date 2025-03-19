@@ -63,6 +63,9 @@ p_labeller = function(vec){
 
 data = read.csv2("data.csv")
 
+# Neue Variable "Population" erstellen und auf "nicht-klinisch" setzen
+data$Population <- "nicht-klinisch"
+data <- data[, c("Population", setdiff(names(data), "Population"))]
 
 # Data cleaning --------------------------------------------------------------
 
@@ -87,6 +90,11 @@ data[data$id == 4, grep("^MINI_current_|^MINI_past_", colnames(data))] <-
 
 #remove ID with missing data
 data <- data[data$Teilnahmeerklaerung != 2, ]
+
+#Jetzt unnötige Variablen entfernen
+# Entferne die nicht benötigten Variablen
+data <- data[, !names(data) %in% c("v_205", "v_208", "Versuchspersonenstunden", "Teilnahmeerklaerung", "somatic", "Schwanger")]
+
 
 
 # sample characteristics --------------------------------------------------
@@ -136,6 +144,17 @@ data$Wohnsituation <- factor(data$Wohnsituation, levels = c(1, 2, 3, 4, 5),
 
 flextable::save_as_docx(flextable::flextable(report_sample(
   data[, c(characteristics)],group_by = "sex")), path = "Table1.docx")
+
+
+
+# Datensatz bereinigen, nur Fragebogendaten -------------------------------
+
+vars_to_remove <- c("age", "sex",
+                    "Beziehungsstatus", "Kinder", "Beschaeftigungsverhaeltnis", 
+                    "Sonstiges_Arbeitsverhaeltnis", "Bildungsabschluss", "Sonstiger_Abschluss", 
+                    "Einkommen", "Wohnsituation")
+
+data <- data[, !names(data) %in% vars_to_remove]
 
 
 # Skalen umkodieren + aggregation ------------------------------------------------------
@@ -357,9 +376,17 @@ data$BSI_Psychotizismus <- rowSums(data[, c("BSI_3", "BSI_14", "BSI_34", "BSI_44
 # Zusatzskala
 data$BSI_Zusatz <- rowSums(data[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na.rm = TRUE)
 
+
+
+
+# LMU Datensatz hinzufügen ------------------------------------------------
+
+df = read.csv2("cleanlmu_t0.csv")
+
+data <- rbind(data, df)
+
 # Datensatz clean speichern 
 write.csv2(data, file = "clean.csv", row.names = FALSE)
-
 
 # Question 2 Rasch---------------------------------------------------------------
 
@@ -516,14 +543,19 @@ CICCplot(PCM(df2), which.item = 3)
 
 # Question 5 ---------------------------------------------------------------
 
+#Group 3 ausschließen da nicht in Japanese Study und nur 3 Pax!
+
+d <- data[data$MINI_Group != "Group3: First depressive episode", ]
+
+
 #dichtotom
-model = lm(ES_total ~ MINI_Group, data = data)
+model = lm(ES_total ~ MINI_Group, data = d)
 anova(model)
 
 emmeans::emmeans(model, pairwise ~ MINI_Group)
 
 #likert
-model = lm(ES_likert_total ~ MINI_Group, data = data)
+model = lm(ES_likert_total ~ MINI_Group, data = d)
 anova(model)
 
 emmeans::emmeans(model, pairwise ~ MINI_Group)
@@ -533,12 +565,14 @@ emmeans::emmeans(model, pairwise ~ MINI_Group)
 #dichtotom
 model = lm(ES_total ~ BDI_Group, data = data)
 anova(model)
+omega_squared(anova(model))
 
 emmeans::emmeans(model, pairwise ~ BDI_Group)
 
 #likert
 model = lm(ES_likert_total ~ BDI_Group, data = data)
 anova(model)
+omega_squared(anova(model))
 
 emmeans::emmeans(model, pairwise ~ BDI_Group)
 
