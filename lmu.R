@@ -291,4 +291,98 @@ write.csv2(lmu, file = "cleanlmu_t0.csv", row.names = FALSE)
 
 
 
+# Longitudinal df ---------------------------------------------------------
+
+#Entferne Probanden ohne t1 Werte im WHO
+long <- long %>%
+  filter(!is.na(t1_WHO5_1))
+
+# Summenvariablen erstellen
+long$t0_WHO5_total <- rowSums(long[, grep("^t0_WHO5_", names(long))], na.rm = TRUE)*4
+long$t1_WHO5_total <- rowSums(long[, grep("^t1_WHO5_", names(long))], na.rm = TRUE)*4
+
+long$t0_BDI_total <- rowSums(long[, grep("^t0_BDI_", names(long))], na.rm = TRUE)
+long$t1_BDI_total <- rowSums(long[, grep("^t1_BDI_", names(long))], na.rm = TRUE)
+
+long$t0_ES_total <- rowSums(long[, grep("^t0_ES_[0-9]", names(long))], na.rm = TRUE)
+long$t1_ES_total <- rowSums(long[, grep("^t1_ES_[0-9]", names(long))], na.rm = TRUE)
+
+long$t0_ES_likert_total <- rowSums(long[, grep("^t0_ES_likert_", names(long))], na.rm = TRUE)
+long$t1_ES_likert_total <- rowSums(long[, grep("^t1_ES_likert_", names(long))], na.rm = TRUE)
+
+library(tidyverse)
+
+# Schritt 1: Daten in Long-Format bringen
+long_change <- long %>%
+  select(ID_Nummer,
+         t0_WHO5_total, t1_WHO5_total,
+         t0_BDI_total, t1_BDI_total,
+         t0_ES_total, t1_ES_total,
+         t0_ES_likert_total, t1_ES_likert_total) %>%
+  pivot_longer(
+    cols = -ID_Nummer,
+    names_to = c("timepoint", "variable"),
+    names_pattern = "t(\\d)_(.*)",
+    values_to = "value"
+  ) %>%
+  mutate(timepoint = paste0("t", timepoint))
+
+# Schritt 2: Plot erstellen
+ggplot(long_change, aes(x = timepoint, y = value, group = ID_Nummer)) +
+  geom_line(alpha = 0.3) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(~ variable, scales = "free_y") +
+  labs(
+    title = "Veränderung der Skalenwerte von t0 zu t1",
+    x = "Messzeitpunkt",
+    y = "Summenwert"
+  ) +
+  theme_minimal()
+
+
+# Mittelwerte und Standardfehler berechnen
+summary_stats <- long_change %>%
+  group_by(variable, timepoint) %>%
+  summarise(
+    mean = mean(value, na.rm = TRUE),
+    se = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  )
+
+# Plot erstellen
+ggplot(summary_stats, aes(x = timepoint, y = mean, group = variable)) +
+  geom_line(aes(color = variable), size = 1) +
+  geom_point(aes(color = variable), size = 3) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se, color = variable), width = 0.1) +
+  labs(
+    title = "Mittelwertsverlauf der Skalen von t0 zu t1",
+    x = "Messzeitpunkt",
+    y = "Mittelwert (± SE)",
+    color = "Variable"
+  ) +
+  theme_minimal()
+
+
+# Responder ---------------------------------------------------------------
+
+#WHO
+long <- long %>%
+  mutate(
+    WHO_change = t1_WHO5_total - t0_WHO5_total,
+    WHO_responder = ifelse(WHO_change >= 10, "Yes", "No")
+  )
+
+
+long <- long %>%
+  mutate(
+    BDI_change = (t1_BDI_total - t0_BDI_total),
+    BDI_change_percent = (t0_BDI_total - t1_BDI_total) / t0_BDI_total,
+    BDI_responder = ifelse(BDI_change_percent >= 0.5 & !is.na(BDI_change_percent), "Yes", "No")
+  )
+
+
+
+# Datensatz clean speichern 
+write.csv2(long, file = "long.csv", row.names = FALSE)
+
 

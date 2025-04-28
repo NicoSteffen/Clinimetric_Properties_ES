@@ -62,6 +62,8 @@ p_labeller = function(vec){
 # Read data ---------------------------------------------------------------
 
 data = read.csv2("data.csv")
+long = read.csv2("long.csv")
+
 
 # Neue Variable "Population" erstellen und auf "nicht-klinisch" setzen
 data$Population <- "nicht-klinisch"
@@ -535,7 +537,42 @@ library(RASCHplot)
 CICCplot(PCM(df2), which.item = 3)
 
 
-# Question 3 ---------------------------------------------------------------
+# Question 3 Predict responder---------------------------------------------------------------
+
+
+# WHO-5 -------------------------------------------------------------------
+library(mlr)
+
+library(mlr)
+
+# Sicherstellen, dass Zielvariable ein Faktor ist
+long$WHO_responder <- factor(long$WHO_responder, levels = c("No", "Yes"))
+
+# Subsets erstellen
+WHO_dichotom <- data.frame(total = long$t0_ES_total, response = long$WHO_responder)
+WHO_likert <- data.frame(total = long$t0_ES_likert_total, response = long$WHO_responder)
+
+# Modell erstellen (klassisch)
+mod <- glm(response ~ total, data = WHO_dichotom, family = "binomial")
+summary(mod)
+
+# Vorhersage testen
+predict(mod, newdata = WHO_dichotom, type = "response")
+
+# mlr: Klassifikations-Task
+task <- makeClassifTask(target = "response", positive = "Yes", data = WHO_dichotom)
+log <- makeLearner("classif.logreg", predict.type = "prob")
+
+# Resampling-Strategie
+desc <- makeResampleDesc(method = "RepCV", folds = 5L, reps = 10L)
+
+# Metriken definieren
+measures <- list(auc, acc, mmce)
+
+# Benchmark starten
+bmr1 <- benchmark(learners = log, tasks = task, resamplings = desc, measures = measures)
+
+
 
 
 # Question 4 ---------------------------------------------------------------
@@ -621,6 +658,18 @@ test = data.frame(data$MDE, data$MDE_MINI)
 #--> Weniger Diagnosen MDE nach MINI als BDI
 
 # Question 8 ---------------------------------------------------------------
+
+long$ES_change = long$t0_ES_total - long$t1_ES_total 
+long$ES_likert_change = long$t0_ES_likert_total - long$t1_ES_likert_total 
+long$ES_change_cent = long$ES_change - mean(long$ES_change)
+long$ES_likert_change_cent = long$ES_likert_change - mean(long$ES_likert_change)
+long$BDI_t0_cent = long$t0_BDI_total - mean(long$t0_BDI_total)
+
+model = lm(BDI_change ~ long$ES_change_cent + long$BDI_t0_cent, data = long )
+summary(model)
+
+model = lm(BDI_change ~ long$ES_likert_change_cent + long$BDI_t0_cent, data = long )
+summary(model)
 
 
 # Question 9 ---------------------------------------------------------------
