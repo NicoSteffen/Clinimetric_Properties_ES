@@ -32,6 +32,8 @@ library(formattable)
 library(glue)
 library(foreach)
 
+
+
 # Create custom functions -------------------------------------------------
 
 roundallnumerics = function(df, digits){
@@ -76,11 +78,26 @@ colnames(data)[colnames(data) == "lfdn"] <- "id"
 #remove ID-1 (test run)
 data <- data[data$id != 1, ]
 
+
+#Number of participiants before exlusion: 
+
+#view(data)
+
+#remove ID with missing data
+data <- data[data$Teilnahmeerklaerung != 2, ]
+
 #exclusion of somatic = 1
 data <- data[data$somatic != 1, ]
 
 #exclusion of Schwanger = 1
 data <- data[data$Schwanger != 1, ]
+
+#excludion of age > 75
+
+data <- data[data$age < 76, ]
+
+
+
 
 #recode answers of ID 4 (changed coding afterwards)
 data[data$id == 4, grep("^ES_", colnames(data))] <- 
@@ -90,8 +107,7 @@ data[data$id == 4, grep("^ES_", colnames(data))] <-
 data[data$id == 4, grep("^MINI_current_|^MINI_past_", colnames(data))] <- 
   lapply(data[data$id == 4, grep("^MINI_", colnames(data))], function(x) ifelse(x == 1, 2, ifelse(x == 2, 1, x)))
 
-#remove ID with missing data
-data <- data[data$Teilnahmeerklaerung != 2, ]
+
 
 #Jetzt unnötige Variablen entfernen
 # Entferne die nicht benötigten Variablen
@@ -101,17 +117,12 @@ data <- data[, !names(data) %in% c("v_205", "v_208", "Versuchspersonenstunden", 
 
 # sample characteristics --------------------------------------------------
 
-characteristics = c("sex",
-                    "age",
-                    "Beziehungsstatus",
-                    "Kinder",
-                    "Beschaeftigungsverhaeltnis",
-                    "Bildungsabschluss",
-                    "Einkommen",
-                    "Wohnsituation")
 
 # Umkodierung in Faktor
-data$sex <- factor(data$sex, levels = c(1, 2, 3), labels = c("weiblich", "männlich", "non-binär/divers"))
+data$sex <- factor(data$sex, levels = c(1, 2, 3), labels = c("female", "male", "divers"))
+
+
+
 
 data$Beziehungsstatus <- factor(data$Beziehungsstatus, levels = c(1, 2, 3, 4, 5, 6, 7),
                                 labels = c("Verheiratet", "Verwitwet", "Geschieden", "Getrennt lebend", "Single",
@@ -144,8 +155,21 @@ data$Wohnsituation <- factor(data$Wohnsituation, levels = c(1, 2, 3, 4, 5),
 
 
 
-flextable::save_as_docx(flextable::flextable(report_sample(
-  data[, c(characteristics)],group_by = "sex")), path = "Table1.docx")
+# characteristics erstellen 
+
+characteristics_non <- data[, c(
+  "Population",
+  "age",
+  "sex",
+  "Beziehungsstatus",
+  "Beschaeftigungsverhaeltnis",
+  "Sonstiges_Arbeitsverhaeltnis",
+  "Bildungsabschluss",
+  "Einkommen"
+)]
+
+write.csv2(characteristics_non, file = "characteristics_non.csv")
+
 
 
 
@@ -217,8 +241,8 @@ data$BDI_Group <- cut(data$BDI_total,
                                  "Group3: severe depression"), 
                       right = TRUE)
 
-table(data$BDI_Group)
-data$BDI_total
+#table(data$BDI_Group)
+#data$BDI_total
 
 # MINBDI_total# MINI Grouping
 
@@ -257,7 +281,8 @@ data$MINI_Group <- factor(data$MINI_Group, levels = c("Group0: No history of MDE
                                                       "Group2: First subthreshold depressive episode", 
                                                       "Group3: First depressive episode", 
                                                       "Group4: History of MDE + current subthreshold", 
-                                                      "Group5: History of MDE + current MDE"))
+                                                      "Group5: History of MDE + current MDE"),
+                          ordered = TRUE)
 
 
 
@@ -328,7 +353,7 @@ data[, grep("^WHO_", colnames(data))] <- lapply(data[, grep("^WHO_", colnames(da
 })
 
 data$WHO_total = rowSums(data[, grep("WHO_[1-5]", colnames(data))], na.rm = TRUE)
-
+data$WHO_total = data$WHO_total * 4
 
 # Erstellen der Variable ES_likert_WHO als Summe der letzten 5 ES_likert Items
 data$ES_likert_WHO <- rowSums(data[, c("ES_likert_6", "ES_likert_7", "ES_likert_8", "ES_likert_9", "ES_likert_10")], na.rm = TRUE)
@@ -343,7 +368,7 @@ data[, grep("^BSI_", colnames(data))] <- lapply(data[, grep("^BSI_", colnames(da
 
 
 # Berechnung der GSI (Global Severity Index) als Mittelwert aller BSI-Items von 1 bis 53
-data$GSI <- rowSums(data[, paste0("BSI_", 1:53)], na.rm = TRUE)
+data$GSI <- rowMeans(data[, paste0("BSI_", 1:53)], na.rm = TRUE)
 
 
 # Berechnung der Summenwerte für die einzelnen BSI-Skalen
@@ -378,6 +403,25 @@ data$BSI_Psychotizismus <- rowSums(data[, c("BSI_3", "BSI_14", "BSI_34", "BSI_44
 # Zusatzskala
 data$BSI_Zusatz <- rowSums(data[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na.rm = TRUE)
 
+
+non_variables = data[, c(
+  "ES_total",
+  "ES_likert_total",
+  "BDI_total",
+  "WHOQOL_total",
+  "PWB_Autonomy",
+  "PWB_Environmental_Mastery",
+  "PWB_Personal_Growth",
+  "PWB_Rositive_Relations",
+  "PWB_Purpose_of_life",
+  "PWB_Self_Acceptance",
+  "PWB_total",
+  "CDRISC_total",
+  "GSI",
+  "WHO_total"
+)]
+
+write.csv2(non_variables, file = "non_variables.csv")
 
 
 
@@ -591,6 +635,15 @@ anova(model)
 
 emmeans::emmeans(model, pairwise ~ MINI_Group)
 
+install.packages("clinfun")
+library(clinfun)
+
+
+jonckheere.test(x = d$ES_total, g = d$MINI_Group, alternative = "decreasing")
+
+
+?JonckheereTest
+
 #likert
 model = lm(ES_likert_total ~ MINI_Group, data = d)
 anova(model)
@@ -621,6 +674,7 @@ data$MDE <- ifelse(data$BDI_total >= 13, 1, 0)
 
 # Perform ROC analysis
 roc_result <- roc(data$MDE, data$ES_total)
+
 
 # Plot ROC curve
 plot(roc_result, main="ROC Curve for ES Cutoff")
@@ -687,8 +741,8 @@ summary(model)
 # Question 10 ---------------------------------------------------------------
 
 
-model1 = lm(PWB_total ~ WHO_total, data)
-model2 = lm(PWB_total ~ WHO_total + ES_likert_total, data)
+model1 = lm(PWB_total ~ sex + age + Bildungsabschluss + WHO_total, data)
+model2 = lm(PWB_total ~ sex + age + Bildungsabschluss + WHO_total + ES_likert_total, data)
 
 anova(model1,model2)
 
@@ -1176,3 +1230,18 @@ summary(cfa_result, fit.measures = TRUE, standardized = TRUE)
 
 model = lm(BDI_total ~ ES_likert_total, data)
 summary(model)
+
+
+
+# zeug s
+
+mod = lm(PWB_total~sex+age+Beziehungsstatus+Beschaeftigungsverhaeltnis+Bildungsabschluss+Einkommen+Wohnsituation, data = data)
+summary(mod)
+
+mod = lm(PWB_Purpose_of_life~sex+age+Beziehungsstatus+Beschaeftigungsverhaeltnis+Bildungsabschluss+Einkommen+Wohnsituation, data = data)
+summary(mod)
+
+names(data)
+
+
+

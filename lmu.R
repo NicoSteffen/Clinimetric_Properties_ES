@@ -4,7 +4,7 @@ library(flextable)
 
 
 lmu = read.csv2("lmu.csv")
-#view(lmu)
+#View(lmu)
 #names(lmu)
 
 # Neue Variable "Population" erstellen und auf "nicht-klinisch" setzen
@@ -41,18 +41,92 @@ columns_to_remove <- c(columns_to_remove, vars_to_remove)  # Füge die explizite
 lmu <- lmu[, !names(lmu) %in% columns_to_remove]
 
 # Entferne Drop Outs ect...
-lmu <- lmu %>%
-  filter(!Note %in% c("missing", "Drop-Out", "Unterlagen fehlend", "DROP Out"))
+dropouts = table(lmu$Note) # 18 Drop outs 
 
-# Entferne ES = NA
+lmu <- lmu %>%
+  filter(!Note %in% c("missing", "Drop-Out", "Unterlagen fehlend", "DROP Out", "nicht vergeben", "DROP out", "Drop out"))
+
+
+sum(is.na(lmu$t0_ES_1)) 
+
+
+# Entferne ES = NA == 3 (einer noch nicht eingetragen) raus --> aktuell 32 probandinnen
 lmu <- lmu %>%
   filter(!is.na(t0_ES_1))
 
 
+
+
+
 # sample characteristics --------------------------------------------------
 
-# Umkodieren in Faktor
-lmu$Geschlecht <- factor(lmu$Geschlecht, levels = c(1, 2, 3), labels = c("weiblich", "männlich", "non-binär/divers"))
+#alter abrunden
+lmu$Alter = floor(lmu$Alter)
+lmu$Geschlecht
+
+# Demographics codieren
+lmu$Geschlecht <- factor(lmu$Geschlecht, levels = c(1, 2, 3), labels = c("female", "male", "divers"))
+lmu$Diag_Prim <- factor(
+  lmu$Diag_Prim,
+  levels = 1:12,
+  labels = c(
+    "Major Depressive Disorder",
+    "Bipolare Störung",
+    "Anxiety Disorder",
+    "Obsessive-Compulsive Disorder",
+    "Schizophrenia",
+    "Schizoaffektive Erkrankung",
+    "(k)PTBS",
+    "Borderline Personality Disorder",
+    "Andere Persönlichkeitsstörung",
+    "ADHS",
+    "Autism Spectrum Disorder",
+    "Sonstige"
+  )
+)
+
+lmu$t0_sozanam_familienstand <- factor(
+  lmu$t0_sozanam_familienstand,
+  levels = 1:5,
+  labels = c("Single", "Partnered", "Married", "Divorced", "Widowed")
+)
+
+lmu$t0_sozanam_wohnsituation <- factor(
+  lmu$t0_sozanam_wohnsituation,
+  levels = 1:5,
+  labels = c("Alleine", "Mit Partner", "Bei den Eltern", "WG", "TWG")
+)
+
+lmu$t0_sozanam_schulabschluss <- factor(
+  lmu$t0_sozanam_schulabschluss,
+  levels = 1:5,
+  labels = c("Grundschule", "Hauptschule", "Realschule", "Fachabitur", "Abitur")
+)
+
+lmu$t0_sozanam_ausbildung <- factor(
+  lmu$t0_sozanam_ausbildung,
+  levels = 1:4,
+  labels = c("keine begonnen", "abgeschlossen", "abgebrochen", "laufend")
+)
+
+lmu$t0_sozanam_studium <- factor(
+  lmu$t0_sozanam_studium,
+  levels = 1:5,
+  labels = c("Nein", "Abgebrochen", "Bin dabei", "Bachelor", "Master (Diplom)")
+)
+
+lmu$t0_sozanam_geld <- factor(
+  lmu$t0_sozanam_geld,
+  levels = 1:5,
+  labels = c("unter 100€", "100-250€", "250-500€", "500-1000€", "über 1000€")
+)
+
+lmu$t0_sozanam_berufstätig <- factor(
+  lmu$t0_sozanam_berufstätig,
+  levels = 1:4,
+  labels = c("Employed", "Retired", "Unemployed", "Student")
+)
+
 
 summary_table <- lmu %>%
   group_by(Geschlecht) %>%
@@ -62,7 +136,28 @@ summary_table <- lmu %>%
     n = n()
   )
 
+
+
 flextable(summary_table)
+
+
+# characteristics erstellen 
+
+characteristics_lmu <- lmu[, c(
+  "Population",
+  "Geschlecht",
+  "Alter",
+  "Diag_Prim",
+  "t0_sozanam_familienstand",
+  "t0_sozanam_wohnsituation",
+  "t0_sozanam_geld",
+  "t0_sozanam_schulabschluss",
+  "t0_sozanam_ausbildung",
+  "t0_sozanam_studium",
+  "t0_sozanam_berufstätig"
+)]
+
+write.csv2(characteristics_lmu, file = "characteristics_lmu.csv")
 
 
 # Create Datensatz für t0 -------------------------------------------------
@@ -141,13 +236,36 @@ desired_order <- c("Population", "id",
                    grep("^BSI_", names(lmu), value = TRUE))
 
 lmu <- lmu[, desired_order]
-view(lmu)
+#View(lmu)
 
 
 # Skalenaggregation und Umkodieren  ---------------------------------------
 
+# 1 missing in ES likert -> 1x mean umputation!
+
 lmu$ES_total <- rowSums(lmu[, grep("^ES_[1-9]$|^ES_10$", colnames(lmu))], na.rm = TRUE)
-lmu$ES_likert_total = rowSums(lmu[, grep("ES_likert", colnames(lmu))], na.rm = TRUE)
+
+# ES_likert mit mean imputation
+# Auswahl der relevanten Items
+es_items <- lmu[, grep("ES_likert", colnames(lmu))]
+
+# Zeilenweise Mittelwert-Imputation
+es_imputed <- t(apply(es_items, 1, function(row) {
+  if (all(is.na(row))) {
+    return(rep(NA, length(row)))  # keine Imputation bei komplett fehlender Zeile
+  }
+  row[is.na(row)] <- mean(row, na.rm = TRUE)
+  return(row)
+}))
+# In Data Frame umwandeln
+es_imputed <- as.data.frame(es_imputed)
+colnames(es_imputed) <- colnames(es_items)
+# Skalenwert berechnen
+lmu$ES_likert_total <- rowSums(es_imputed)
+
+
+
+
 lmu$BDI_total = rowSums(lmu[, grep("BDI_", colnames(lmu))], na.rm = TRUE)
 
 # Erstellen der Gruppen basierend auf dem BDI_total Score
@@ -225,32 +343,43 @@ lmu$WHOQOL_total <- rowMeans(lmu[, c("WHOQOL_Physical_Health_Converted", "WHOQOL
 
 # PWB
 
-lmu$PWB_1 <- dplyr::recode(lmu$PWB_1, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-lmu$PWB_3 <- dplyr::recode(lmu$PWB_3, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-lmu$PWB_5 <- dplyr::recode(lmu$PWB_5, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-lmu$PWB_6 <- dplyr::recode(lmu$PWB_6, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-lmu$PWB_8 <- dplyr::recode(lmu$PWB_8, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-lmu$PWB_10 <- dplyr::recode(lmu$PWB_10, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-lmu$PWB_11 <- dplyr::recode(lmu$PWB_11, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-lmu$PWB_14 <- dplyr::recode(lmu$PWB_14, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+#lmu$PWB_1 <- dplyr::recode(lmu$PWB_1, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+#lmu$PWB_3 <- dplyr::recode(lmu$PWB_3, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+#lmu$PWB_5 <- dplyr::recode(lmu$PWB_5, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+#lmu$PWB_6 <- dplyr::recode(lmu$PWB_6, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+#lmu$PWB_8 <- dplyr::recode(lmu$PWB_8, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+#lmu$PWB_10 <- dplyr::recode(lmu$PWB_10, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+#lmu$PWB_11 <- dplyr::recode(lmu$PWB_11, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
+#lmu$PWB_14 <- dplyr::recode(lmu$PWB_14, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
 
-lmu$PWB_Autonomy = rowSums(lmu[,c("PWB_1", "PWB_9", "PWB_17")])
-lmu$PWB_Environmental_Mastery = rowSums(lmu[,c("PWB_2", "PWB_11", "PWB_18")])
-lmu$PWB_Personal_Growth = rowSums(lmu[,c("PWB_4", "PWB_12", "PWB_14")])
-lmu$PWB_Rositive_Relations = rowSums(lmu[,c("PWB_5", "PWB_10", "PWB_13")])
-lmu$PWB_Purpose_of_life = rowSums(lmu[,c("PWB_6", "PWB_8", "PWB_15")])
-lmu$PWB_Self_Acceptance = rowSums(lmu[,c("PWB_3", "PWB_7", "PWB_16")])
+#lmu$PWB_Autonomy = rowSums(lmu[,c("PWB_1", "PWB_9", "PWB_17")])
+#lmu$PWB_Environmental_Mastery = rowSums(lmu[,c("PWB_2", "PWB_11", "PWB_18")])
+#lmu$PWB_Personal_Growth = rowSums(lmu[,c("PWB_4", "PWB_12", "PWB_14")])
+#lmu$PWB_Rositive_Relations = rowSums(lmu[,c("PWB_5", "PWB_10", "PWB_13")])
+#lmu$PWB_Purpose_of_life = rowSums(lmu[,c("PWB_6", "PWB_8", "PWB_15")])
+#lmu$PWB_Self_Acceptance = rowSums(lmu[,c("PWB_3", "PWB_7", "PWB_16")])
 
-lmu$PWB_total = rowSums(lmu[,c("PWB_Autonomy", "PWB_Environmental_Mastery", "PWB_Personal_Growth","PWB_Rositive_Relations","PWB_Purpose_of_life", "PWB_Self_Acceptance"  )])
+#lmu$PWB_total = rowSums(lmu[,c("PWB_Autonomy", "PWB_Environmental_Mastery", "PWB_Personal_Growth","PWB_Rositive_Relations","PWB_Purpose_of_life", "PWB_Self_Acceptance"  )])
+
+# Leere Variablen mit NA erstellen (gleiche Länge wie lmu)
+lmu$PWB_Autonomy <- NA
+lmu$PWB_Environmental_Mastery <- NA
+lmu$PWB_Personal_Growth <- NA
+lmu$PWB_Rositive_Relations <- NA
+lmu$PWB_Purpose_of_life <- NA
+lmu$PWB_Self_Acceptance <- NA
+lmu$PWB_total <- NA
+
+
 
 #RISC, WHO
 lmu$CDRISC_total <- rowSums(lmu[, grep("^CDRISC_", colnames(lmu))], na.rm = TRUE)
-lmu$WHO_total = rowSums(lmu[, grep("WHO_[1-5]", colnames(lmu))], na.rm = TRUE)
+lmu$WHO_total = rowSums(lmu[, grep("WHO_[1-5]", colnames(lmu))], na.rm = TRUE) * 4
 # Erstellen der Variable ES_likert_WHO als Summe der letzten 5 ES_likert Items
 lmu$ES_likert_WHO <- rowSums(lmu[, c("ES_likert_6", "ES_likert_7", "ES_likert_8", "ES_likert_9", "ES_likert_10")], na.rm = TRUE)
 
 # Berechnung der GSI (Global Severity Index) als Mittelwert aller BSI-Items von 1 bis 53
-lmu$GSI <- rowSums(lmu[, paste0("BSI_", 1:53)], na.rm = TRUE)
+lmu$GSI <- rowMeans(lmu[, paste0("BSI_", 1:53)], na.rm = TRUE)
 
 
 # Berechnung der Summenwerte für die einzelnen BSI-Skalen
@@ -288,14 +417,42 @@ lmu$BSI_Zusatz <- rowSums(lmu[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na.r
 # Datensatz clean speichern 
 write.csv2(lmu, file = "cleanlmu_t0.csv", row.names = FALSE)
 
+#relevant variables for characteristics table 
 
+lmu_variables = lmu[, c(
+  "ES_total",
+  "ES_likert_total",
+  "BDI_total",
+  "WHOQOL_total",
+  "PWB_Autonomy",
+  "PWB_Environmental_Mastery",
+  "PWB_Personal_Growth",
+  "PWB_Rositive_Relations",
+  "PWB_Purpose_of_life",
+  "PWB_Self_Acceptance",
+  "PWB_total",
+  "CDRISC_total",
+  "GSI",
+  "WHO_total"
+)]
+
+write.csv2(lmu_variables, file = "lmu_variables.csv")
 
 
 # Longitudinal df ---------------------------------------------------------
 
-#Entferne Probanden ohne t1 Werte im WHO
+
+
+View(long)
+
+#Entferne Probanden ohne t1 Werte im WHO --> 7 !!, bleiben 25 übrig 
 long <- long %>%
   filter(!is.na(t1_WHO5_1))
+
+long$t1_ES_likert_3[1] # diesen Wert muss du ändern 
+
+# hier musst du nochmal mit imputieren für den ES_likert!!!
+# plus ein missing im BDI !
 
 # Summenvariablen erstellen
 long$t0_WHO5_total <- rowSums(long[, grep("^t0_WHO5_", names(long))], na.rm = TRUE)*4
