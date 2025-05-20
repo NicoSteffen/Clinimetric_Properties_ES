@@ -221,16 +221,19 @@ t.test(ES_total ~ Population,all_characteristics, var.equal = T)
 t.test(ES_likert_total ~ Population,all_characteristics, var.equal = T)
 t.test(BDI_total ~ Population,all_characteristics, var.equal = T)
 t.test(WHOQOL_total ~ Population,all_characteristics, var.equal = T)
-t.test(PWB_total ~ Population,all_characteristics, var.equal = T)
-t.test(PWB_Autonomy ~ Population,all_characteristics, var.equal = T)
-t.test(PWB_Environmental_Mastery ~ Population,all_characteristics, var.equal = T)
-t.test(PWB_Personal_Growth ~ Population,all_characteristics, var.equal = T)
-t.test(PWB_Rositive_Relations ~ Population,all_characteristics, var.equal = T)
-t.test(PWB_Purpose_of_life ~ Population,all_characteristics, var.equal = T)
-t.test(PWB_Self_Acceptance ~ Population,all_characteristics, var.equal = T)
 t.test(CDRISC_total ~ Population,all_characteristics, var.equal = T)
 t.test(GSI ~ Population,all_characteristics, var.equal = T)
 t.test(WHO_total ~ Population,all_characteristics, var.equal = T)
+
+# non parametric? 
+
+wilcox.test(ES_total ~ Population, data = all_characteristics)
+wilcox.test(ES_likert_total ~ Population, data = all_characteristics)
+wilcox.test(BDI_total ~ Population, data = all_characteristics)
+wilcox.test(WHOQOL_total ~ Population, data = all_characteristics)
+wilcox.test(CDRISC_total ~ Population, data = all_characteristics)
+wilcox.test(GSI ~ Population, data = all_characteristics)
+wilcox.test(WHO_total ~ Population, data = all_characteristics)
 
 # Required package
 library(car)
@@ -253,3 +256,9 @@ for (v in vars) {
     print(shapiro.test(group_data))
   }
 }
+
+table(diagnosis)
+
+model = lm(PWB_total ~ ES_total + Age + Sex + Highest_educational_level, data = all_characteristics)
+summary(model)
+

@@ -434,6 +434,63 @@ data <- rbind(data, df)
 # Datensatz clean speichern 
 write.csv2(data, file = "clean.csv", row.names = FALSE)
 
+
+# Correlation analyses ----------------------------------------------------
+
+# Question 12 Correlation Analyses-------------------------------------------------------------
+
+cor = data[, c("ES_total", "GSI", "WHOQOL_total", "CDRISC_total", "PWB_total", "BDI_total")]
+
+descriptive_stats = data.frame(
+  n = colSums(!is.na(cor)),
+  M = sapply(cor, mean, na.rm = TRUE),
+  SD = sapply(cor, sd, na.rm = TRUE)
+)
+
+correlation_matrix = cor(cor, method = "spearman", use = "pairwise.complete.obs")
+
+final_table = cbind(descriptive_stats,correlation_matrix )
+
+
+final_table <- roundallnumerics(final_table, 2)
+final_table = flextable(final_table)
+
+# p-values
+cor_results <- Hmisc::rcorr(as.matrix(cor))
+
+# FDR
+p_adj_matrix <- matrix(
+  p.adjust(cor_results$P, method = "BH"),
+  nrow = nrow(cor_results$P),
+  ncol = ncol(cor_results$P),
+  dimnames = dimnames(cor_results$P)
+)
+
+
+# normality tests:
+
+# Extract relevant variables
+cor <- data[, c("ES_total", "GSI", "WHOQOL_total", "CDRISC_total", "PWB_total", "BDI_total")]
+
+# Shapiro-Wilk tests for normality
+shapiro_results <- lapply(cor, shapiro.test)
+shapiro_results
+
+
+# Histograms and QQ plots
+par(mfrow = c(2, 2))  # 2x2 plotting grid; adjust if needed
+
+for (varname in names(cor)) {
+  hist(cor[[varname]], main = paste("Histogram of", varname), xlab = varname, col = "lightblue", breaks = 20)
+  qqnorm(cor[[varname]], main = paste("QQ Plot of", varname))
+  qqline(cor[[varname]], col = "red")
+}
+
+# Reset plotting layout
+par(mfrow = c(1, 1))
+
+
+
 # Question 2 Rasch---------------------------------------------------------------
 
 select <- dplyr::select
@@ -765,380 +822,6 @@ PWB_Environmental_Mastery
 
 
 # Question 11 -------------------------------------------------------------
-
-
-
-# Question 12 Correlation Analyses-------------------------------------------------------------
-
-# Cor table ES + PWB:
-
-cor.pwb = data[, c("ES_total", "PWB_Autonomy", "PWB_Environmental_Mastery", "PWB_Personal_Growth", "PWB_Rositive_Relations", 
-               "PWB_Purpose_of_life", "PWB_Self_Acceptance")]
-
-descriptive_stats_pwb <- data.frame(
-  M = sapply(cor.pwb, mean, na.rm = TRUE),
-  SD = sapply(cor.pwb, sd, na.rm = TRUE),
-  Skew = sapply(cor.pwb, skewness, na.rm = TRUE),
-  Kurtosis = sapply(cor.pwb, kurtosis, na.rm = TRUE)
-)
-
-
-#cor table ES + WHOQOL
-
-cor.whoqol = data[, c("ES_total", "WHOQOL_Physical_Health_Converted", "WHOQOL_Psychological_Converted", 
-                      "WHOQOL_Social_Relationships_Converted", "WHOQOL_Environment_Converted")]
-
-descriptive_stats_whoqol <- data.frame(
-  M = sapply(cor.whoqol, mean, na.rm = TRUE),
-  SD = sapply(cor.whoqol, sd, na.rm = TRUE),
-  Skew = sapply(cor.whoqol, skewness, na.rm = TRUE),
-  Kurtosis = sapply(cor.whoqol, kurtosis, na.rm = TRUE)
-)
-
-
-# cor CDRISC, GSI, BDI, ES Lkert, + WHOQOL Total
-
-cor.df <- data[, c("ES_total", "ES_likert_total", "GSI", "CDRISC_total", "BDI_total", "WHOQOL_total")]
-
-descriptive_stats_df <- data.frame(
-  M = sapply(cor.df, mean, na.rm = TRUE),
-  SD = sapply(cor.df, sd, na.rm = TRUE),
-  Skew = sapply(cor.df, skewness, na.rm = TRUE),
-  Kurtosis = sapply(cor.df, kurtosis, na.rm = TRUE)
-)
-
-
-#Überlegung: Correlation Analyses with subscales or total WHOQOL, PWB? 
-#cor.df <- data[, c("ES_total", "ES_likert_total", "GSI", "WHOQOL_total", "CDRISC_total", "PWB_total", "BDI_total")]
-
-#hier mit Subscales:
-#cor.df <- data[, c("ES_total", "ES_likert_total", "GSI", "BDI_total", "WHOQOL_Physical_Health_Converted", "WHOQOL_Psychological_Converted",
- #                  "WHOQOL_Social_Relationships_Converted", "WHOQOL_Environment_Converted", "WHOQOL_total",
-#                   "CDRISC_total", "PWB_Autonomy","PWB_Environmental_Mastery","PWB_Personal_Growth","PWB_Rositive_Relations",
-#                   "PWB_Purpose_of_life","PWB_Self_Acceptance", "PWB_total")]
-
-
-
-#descriptive_stats <- data.frame(
-#  Variable = c("ES", "ES_likert", "GSI", "BDI", "Physical Health", "Psychological", "Social Relationships", "Environment", "WHOQOL_total",
-#               "CDRISC", "Autonomy", "Environmental Mastery", "Personal Growth", "Positive Relations", "Purpose of life", "Self Acceptance",
-#               "PWB"),
-#  M = sapply(cor.df, mean, na.rm = TRUE),
-#  SD = sapply(cor.df, sd, na.rm = TRUE),
-#  Skew = sapply(cor.df, skewness, na.rm = TRUE),
-#  Kurtosis = sapply(cor.df, kurtosis, na.rm = TRUE)
-#)
-
-# Erstellen der Datensätze für die einzelnen Fragebögen
-
-# data_ES: Nur die ES_ Variablen (ohne ES_likert)
-data_ES <- data[, grep("^ES_[0-9]+$", colnames(data))]
-
-# data_ES_likert: Nur die ES_likert Variablen
-data_ES_likert <- data[, grep("^ES_likert_[0-9]+$", colnames(data))]
-
-# data_GSI: Nur die BSI_ Variablen
-data_GSI <- data[, grep("^BSI_[0-9]+$", colnames(data))]
-
-# data_BDI: Nur die BDI_ Variablen
-data_BDI <- data[, grep("^BDI_[0-9]+$", colnames(data))]
-
-# data_WHOQOL: Nur die WHOQOL_ Variablen
-data_WHOQOL <- data[, grep("^WHOQOL_[0-9]+$", colnames(data))]
-
-# data_CDRISC: Nur die CDRISC_ Variablen
-data_CDRISC <- data[, grep("^CDRISC_[0-9]+$", colnames(data))]
-
-# data_PWB: Nur die PWB_ Variablen
-data_PWB <- data[, grep("^PWB_[0-9]+$", colnames(data))]
-
-# PWB-Dimensionen
-data_PWB_Autonomy <- data[, c("PWB_1", "PWB_9", "PWB_17")]
-data_PWB_Environmental_Mastery <- data[, c("PWB_2", "PWB_11", "PWB_18")]
-data_PWB_Personal_Growth <- data[, c("PWB_4", "PWB_12", "PWB_14")]
-data_PWB_Positive_Relations <- data[, c("PWB_5", "PWB_10", "PWB_13")]
-data_PWB_Purpose_of_Life <- data[, c("PWB_6", "PWB_8", "PWB_15")]
-data_PWB_Self_Acceptance <- data[, c("PWB_3", "PWB_7", "PWB_16")]
-
-# WHOQOL-Dimensionen
-data_WHOQOL_Physical_Health <- data[, c("WHOQOL_3", "WHOQOL_4", "WHOQOL_10", "WHOQOL_15", "WHOQOL_16", "WHOQOL_17", "WHOQOL_18")]
-data_WHOQOL_Psychological <- data[, c("WHOQOL_5", "WHOQOL_6", "WHOQOL_7", "WHOQOL_11", "WHOQOL_19", "WHOQOL_26")]
-data_WHOQOL_Social_Relationships <- data[, c("WHOQOL_20", "WHOQOL_21", "WHOQOL_22")]
-data_WHOQOL_Environment <- data[, c("WHOQOL_8", "WHOQOL_9", "WHOQOL_12", "WHOQOL_13", "WHOQOL_14", "WHOQOL_23", "WHOQOL_24", "WHOQOL_25")]
-
-  
-  
-alpha(data_PWB_Autonomy)
-
-
-# Berechnung von Cronbach's Alpha-Werten wie zuvor
-ES_alpha <- alpha(data_ES)$total$raw_alpha
-ES_likert_alpha <- alpha(data_ES_likert)$total$raw_alpha
-GSI_alpha <- alpha(data_GSI)$total$raw_alpha
-BDI_alpha <- alpha(data_BDI)$total$raw_alpha
-Physical_Health_alpha <- alpha(data_WHOQOL_Physical_Health)$total$raw_alpha
-Psychological_alpha <- alpha(data_WHOQOL_Psychological)$total$raw_alpha
-Social_Relationships_alpha <- alpha(data_WHOQOL_Social_Relationships)$total$raw_alpha
-Environment_alpha <- alpha(data_WHOQOL_Environment)$total$raw_alpha
-CDRISC_alpha <- alpha(data_CDRISC)$total$raw_alpha
-Autonomy_alpha <- alpha(data_PWB_Autonomy)$total$raw_alpha
-Environmental_Mastery_alpha <- alpha(data_PWB_Environmental_Mastery)$total$raw_alpha
-Personal_Growth_alpha <- alpha(data_PWB_Personal_Growth)$total$raw_alpha
-Positive_Relations_alpha <- alpha(data_PWB_Positive_Relations)$total$raw_alpha
-Purpose_of_Life_alpha <- alpha(data_PWB_Purpose_of_Life)$total$raw_alpha
-Self_Acceptance_alpha <- alpha(data_PWB_Self_Acceptance)$total$raw_alpha
-WHOQOL_alpha = alpha(data_WHOQOL)$total$raw_alpha
-
-# Erstellen der Alpha-Spalte in der Tabelle
-#descriptive_stats$Alpha <- c(ES_alpha, ES_likert_alpha, GSI_alpha, BDI_alpha, 
- #                            Physical_Health_alpha, Psychological_alpha, 
-#                             Social_Relationships_alpha, Environment_alpha, 
-#                             WHOQOL_total_alpha, CDRISC_alpha, 
-##                             Autonomy_alpha, Environmental_Mastery_alpha, 
-#                             Personal_Growth_alpha, Positive_Relations_alpha, 
-#                             Purpose_of_Life_alpha, Self_Acceptance_alpha, 
-#                             PWB_alpha)
-
-
-# Alpha in PWB Tabelle erstellen 
-
-descriptive_stats_pwb$Alpha = c(ES_alpha,Autonomy_alpha, Environmental_Mastery_alpha, Personal_Growth_alpha,
-                                Positive_Relations_alpha, Purpose_of_Life_alpha, Self_Acceptance_alpha)
-
-
-# Alpha in whoqol table
-
-descriptive_stats_whoqol$Alpha = c(ES_alpha, Physical_Health_alpha, Psychological_alpha,
-                                   Social_Relationships_alpha, Environment_alpha)
-
-
-# Alpha Tabelle drei
-
-descriptive_stats_df$Alpha = c(ES_alpha, ES_likert_alpha, GSI_alpha,
-                               CDRISC_alpha,BDI_alpha, WHOQOL_alpha)
-
-
-
-# Correlations for PWB table 
-correlation_matrix_pwb <- cor(cor.pwb, use = "pairwise.complete.obs")
-correlation_matrix_pwb <- as.data.frame(correlation_matrix_pwb)
-
-final_table_pwb = descriptive_stats_pwb
-final_table_pwb$ES_total = correlation_matrix_pwb$ES_total
-final_table_pwb$PWB_Autonomy = correlation_matrix_pwb$PWB_Autonomy
-final_table_pwb$PWB_Environmental_Mastery = correlation_matrix_pwb$PWB_Environmental_Mastery
-final_table_pwb$PWB_Personal_Growth = correlation_matrix_pwb$PWB_Personal_Growth
-final_table_pwb$PWB_Rositive_Relations = correlation_matrix_pwb$PWB_Rositive_Relations
-final_table_pwb$PWB_Purpose_of_life = correlation_matrix_pwb$PWB_Purpose_of_life
-
-
-# correlations for whoqol table
-correlation_matrix_whoqol <- cor(cor.whoqol, use = "pairwise.complete.obs")
-correlation_matrix_whoqol <- as.data.frame(correlation_matrix_whoqol)
-
-final_table_whoqol = descriptive_stats_whoqol
-final_table_whoqol$ES_total = correlation_matrix_whoqol$ES_total
-final_table_whoqol$WHOQOL_Physical_Health_Converted = correlation_matrix_whoqol$WHOQOL_Physical_Health_Converted
-final_table_whoqol$WHOQOL_Psychological_Converted = correlation_matrix_whoqol$WHOQOL_Psychological_Converted
-final_table_whoqol$WHOQOL_Social_Relationships_Converted = correlation_matrix_whoqol$WHOQOL_Social_Relationships_Converted
-final_table_whoqol$WHOQOL_Environment_Converted = correlation_matrix_whoqol$WHOQOL_Environment_Converted
-
-# correlations for 3rd table
-correlation_matrix_df <- cor(cor.df, use = "pairwise.complete.obs")
-correlation_matrix_df <- as.data.frame(correlation_matrix_df)
-
-final_table_df = descriptive_stats_df
-final_table_df$ES_total = correlation_matrix_df$ES_total
-final_table_df$ES_likert_total = correlation_matrix_df$ES_likert_total
-final_table_df$GSI = correlation_matrix_df$GSI
-final_table_df$CDRISC_total = correlation_matrix_df$CDRISC_total
-final_table_df$BDI_total = correlation_matrix_df$BDI_total
-final_table_df$WHOQOL_total = correlation_matrix_df$WHOQOL_total
-
-
-# Combine all information into the final table
-#final_table <- descriptive_stats
-#final_table$ES_total <- correlation_matrix$ES_total
-#final_table$ES_likert_total <- correlation_matrix$ES_likert_total
-#final_table$GSI <- correlation_matrix$GSI
-#final_table$BDI_total <- correlation_matrix$BDI_total
-#final_table$WHOQOL_Physical_Health_Converted <- correlation_matrix$WHOQOL_Physical_Health_Converted
-#final_table$WHOQOL_Psychological_Converted <- correlation_matrix$WHOQOL_Psychological_Converted
-#final_table$WHOQOL_Social_Relationships_Converted <- correlation_matrix$WHOQOL_Social_Relationships_Converted
-#final_table$WHOQOL_Environment_Converted <- correlation_matrix$WHOQOL_Environment_Converted
-#final_table$WHOQOL_total <- correlation_matrix$WHOQOL_total
-#final_table$CDRISC_total <- correlation_matrix$CDRISC_total
-#final_table$PWB_Autonomy <- correlation_matrix$PWB_Autonomy
-#final_table$PWB_Environmental_Mastery <- correlation_matrix$PWB_Environmental_Mastery
-#final_table$PWB_Personal_Growth <- correlation_matrix$PWB_Personal_Growth
-#final_table$PWB_Rositive_Relations <- correlation_matrix$PWB_Rositive_Relations
-#final_table$PWB_Purpose_of_life <- correlation_matrix$PWB_Purpose_of_life
-#final_table$PWB_Self_Acceptance <- correlation_matrix$PWB_Self_Acceptance
-#final_table$PWB_total <- correlation_matrix$PWB_total
-
-# Round all numeric values in the final table
-final_table_pwb <- roundallnumerics(final_table_pwb, 2)
-final_table_whoqol <- roundallnumerics(final_table_whoqol, 2)
-final_table_df <- roundallnumerics(final_table_df, 2)
-
-# PWB tabelle speichern
-
-# Füge eine Spalte mit Variablennamen hinzu
-final_table_pwb$Variable <- rownames(final_table_pwb)
-
-# Verschiebe die Spalte "Variable" an den Anfang
-final_table_pwb <- final_table_pwb[, c("Variable", setdiff(names(final_table_pwb), "Variable"))]
-
-# Erstelle die flextable aus der Tabelle
-formatted_table <- flextable(final_table_pwb)
-
-# Benenne die Spalten entsprechend
-formatted_table <- set_header_labels(
-  formatted_table,
-  M = "M",
-  SD = "SD",
-  Skew = "Skew",
-  Kurtosis = "Kurtosis",
-  Alpha = "α",
-  ES_total = "I",
-  PWB_Autonomy = "II",
-  PWB_Environmental_Mastery = "III",
-  PWB_Personal_Growth = "IV",
-  PWB_Rositive_Relations = "V",
-  PWB_Purpose_of_life = "VI",
-  PWB_Self_Acceptance = "VII"
-)
-
-
-# Optimiere die Darstellung (automatische Anpassung)
-formatted_table <- autofit(formatted_table)
-
-# Optional: Stil hinzufügen
-formatted_table <- bold(formatted_table, part = "header")  # Header fett machen
-formatted_table <- align(formatted_table, align = "center", part = "all")  # Text zentrieren
-
-# Tabelle anzeigen
-formatted_table
-
-# Speichere die Tabelle als Word-Dokument
-save_as_docx(formatted_table, path = "table_with_header.docx")
-
-
-#whoqol tabelle speichern 
-
-# WHOQOL Tabelle vorbereiten
-
-# Füge eine Spalte mit Variablennamen hinzu
-final_table_whoqol$Variable <- rownames(final_table_whoqol)
-
-# Verschiebe die Spalte "Variable" an den Anfang
-final_table_whoqol <- final_table_whoqol[, c("Variable", setdiff(names(final_table_whoqol), "Variable"))]
-
-# Erstelle die flextable aus der Tabelle
-formatted_table_whoqol <- flextable(final_table_whoqol)
-
-# Benenne die Spalten entsprechend
-formatted_table_whoqol <- set_header_labels(
-  formatted_table_whoqol,
-  M = "M",
-  SD = "SD",
-  Skew = "Skew",
-  Kurtosis = "Kurtosis",
-  Alpha = "α",
-  ES_total = "I",
-  WHOQOL_Physical_Health_Converted = "II",
-  WHOQOL_Psychological_Converted = "III",
-  WHOQOL_Social_Relationships_Converted = "IV",
-  WHOQOL_Environment_Converted = "V"
-)
-
-# Optimiere die Darstellung (automatische Anpassung)
-formatted_table_whoqol <- autofit(formatted_table_whoqol)
-
-# Optional: Stil hinzufügen
-formatted_table_whoqol <- bold(formatted_table_whoqol, part = "header")  # Header fett machen
-formatted_table_whoqol <- align(formatted_table_whoqol, align = "center", part = "all")  # Text zentrieren
-
-# Tabelle anzeigen
-formatted_table_whoqol
-
-# Speichere die Tabelle als Word-Dokument
-save_as_docx(formatted_table_whoqol, path = "table_whoqol.docx")
-
-
-# dritte tabelle fertig 
-
-# Füge eine Spalte mit Variablennamen hinzu
-final_table_df$Variable <- rownames(final_table_df)
-
-# Verschiebe die Spalte "Variable" an den Anfang
-final_table_df <- final_table_df[, c("Variable", setdiff(names(final_table_df), "Variable"))]
-
-# Erstelle die flextable aus der Tabelle
-formatted_table_df <- flextable::flextable(final_table_df)
-
-# Benenne die Spalten entsprechend
-formatted_table_df <- set_header_labels(
-  formatted_table_df,
-  Variable = "Variable",
-  M = "M",
-  SD = "SD",
-  Skew = "Skew",
-  Kurtosis = "Kurtosis",
-  Alpha = "α",
-  ES_total = "I",
-  ES_likert_total = "II",
-  GSI = "III",
-  CDRISC_total = "IV",
-  BDI_total = "V"
-)
-
-# Optimiere die Darstellung (automatische Anpassung)
-formatted_table_df <- autofit(formatted_table_df)
-
-# Optional: Stil hinzufügen
-formatted_table_df <- bold(formatted_table_df, part = "header")  # Header fett machen
-formatted_table_df <- align(formatted_table_df, align = "center", part = "all")  # Text zentrieren
-formatted_table_df <- align(formatted_table_df, j = 1, align = "left", part = "all")  # Erste Spalte linksbündig
-
-# Tabelle anzeigen
-formatted_table_df
-
-# Speichere die Tabelle als Word-Dokument
-save_as_docx(formatted_table_df, path = "table_final_df.docx")
-
-
-
-options(scipen = 999)
-
-# Calculate p-values pwb table
-correlation_results_pwb <- Hmisc::rcorr(as.matrix(cor.pwb))
-p_values_matrix_pwb <- correlation_results_pwb$P
-p_values_df_pwb <- as.data.frame(p_values_matrix_pwb)
-
-# Calculate p-values whoqol table
-correlation_results_whoqol <- Hmisc::rcorr(as.matrix(cor.whoqol))
-p_values_matrix_whoqol <- correlation_results_whoqol$P
-p_values_df_whoqol <- as.data.frame(p_values_matrix_whoqol)
-
-# Calculate p-values 3rd table
-correlation_results_df <- Hmisc::rcorr(as.matrix(cor.df))
-p_values_matrix_df <- correlation_results_df$P
-p_values_df_df <- as.data.frame(p_values_matrix_df)
-
-
-
-
-# Apply Benjamini-Hochberg correction
-p_values_vector <- as.vector(p_values_matrix_df)
-p_values_bh <- p.adjust(p_values_vector, method = "BH")
-
-# Reshape corrected p-values back into a matrix form and convert to data frame
-p_values_bh_matrix <- matrix(p_values_bh, ncol = ncol(p_values_df_df), nrow = nrow(p_values_df_df))
-p_values_bh_df <- as.data.frame(p_values_bh_matrix)
-
-# Print the corrected p-values data frame
-print(p_values_bh_df)
 
 
 

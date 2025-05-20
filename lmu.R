@@ -36,7 +36,7 @@ prefixes_to_remove <- c("t0_PSI", "t0_CEQ", "t0_CTQ", "t0_WB_CU", "t0_MPQ", "t0_
                         "t1_ADP", "t2", "t3")
 
 columns_to_remove <- names(lmu)[sapply(names(lmu), function(x) any(startsWith(x, prefixes_to_remove)))]
-columns_to_remove <- c(columns_to_remove, vars_to_remove)  # Füge die expliziten Variablen hinzu
+columns_to_remove <- c(columns_to_remove, vars_to_remove)  
 
 lmu <- lmu[, !names(lmu) %in% columns_to_remove]
 
@@ -208,15 +208,13 @@ new_names <- c("Population", "id",
                paste0("WHOQOL_", 1:26), 
                paste0("BSI_", 1:53))
 
-# Variablennamen umbenennen
 names(lmu) <- new_names
 
 
-# Fehlende Variablen definieren
+# PWB missing
 missing_vars <- c("PWB_1", "PWB_2", "PWB_3", "PWB_4", "PWB_5", "PWB_6", "PWB_7", "PWB_8", 
                   "PWB_9", "PWB_10", "PWB_11", "PWB_12", "PWB_13", "PWB_14", "PWB_15", "PWB_16", "PWB_17", "PWB_18")
 
-# Fehlende Variablen mit NA initialisieren, falls sie nicht existieren
 for (var in missing_vars) {
   if (!var %in% names(lmu)) {
     lmu[[var]] <- NA
