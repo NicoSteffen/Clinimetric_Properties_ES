@@ -159,6 +159,15 @@ characteristics_lmu <- lmu[, c(
 
 write.csv2(characteristics_lmu, file = "characteristics_lmu.csv")
 
+#create Rasch df 
+
+raschlmu <- lmu %>%
+  select(starts_with("t0_ES_"), Population, Alter, Geschlecht) %>%
+  select(-starts_with("t0_ES_likert"))
+
+names(raschlmu) = c("ES_1", "ES_2", "ES_3", "ES_4", "ES_5", "ES_6", "ES_7", "ES_8", "ES_9", "ES_10", "Population", "age", "sex")
+
+write.csv2(raschlmu, file = "raschlmu.csv")
 
 # Create Datensatz für t0 -------------------------------------------------
 

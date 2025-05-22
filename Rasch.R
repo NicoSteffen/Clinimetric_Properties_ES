@@ -1,106 +1,148 @@
-#Rasch dichotom
-
-data = read.csv2("clean.csv")
-
-
+library(easyRasch)
+library(grateful)
+library(ggrepel)
+library(car)
+library(kableExtra)
+library(readxl)
+library(eRm)
+library(iarm)
+library(mirt)
+library(psych)
+library(ggplot2)
+library(psychotree)
+library(matrixStats)
+library(reshape)
+library(knitr)
+library(patchwork)
+library(formattable) 
+library(glue)
+library(foreach)
 
 select <- dplyr::select
 count <- dplyr::count
 recode <- car::recode
 rename <- dplyr::rename
 
-#ES_likert
+raschlmu = read.csv2("raschlmu.csv")
+raschnon = read.csv2("raschnon.csv")
 
-#select data
+#rasch = raschnon
 
-df <- data %>% 
-  select(starts_with("ES_"),
-         age,sex)  %>% 
-  select(!starts_with("ES_likert_")) %>% 
-  select(!ES_total)
+rasch = rbind(raschlmu,raschnon )
+rasch = rasch[,2:14]
 
-glimpse(df)
+glimpse(rasch)
 
-itemlabels <- df %>% 
-  select(starts_with("ES_likert_")) %>% 
-  names() %>% 
-  as_tibble() %>% 
-  separate(value, c(NA, "item"), sep ="_[0-9][0-9]_") %>% 
-  mutate(itemnr = paste0("ES_likert_",c(1:10)), .before = "item")
+rasch$sex <- as.factor(rasch$sex)
+rasch$Population <- as.factor(rasch$Population)
+  
+rasch <- rasch %>%
+  mutate(across(c(age, starts_with("ES_")), as.double))
 
-#remove non-binär
+itemlabels <- rasch %>%
+  select(starts_with("ES_")) %>%
+  names() %>%
+  tibble(item = .) %>%
+  mutate(itemnr = paste0("ES_", 1:10), .before = "item")
 
-df <- df %>% 
-  filter(sex %in% c("männlich","weiblich"))
+rasch %>% 
+  select(sex,age,Population) %>% 
+  glimpse()
 
-#Vektor for sex
-dif.sex <- factor(df$sex)
+rasch <- rasch %>% 
+  filter(sex %in% c("female","male")) # --> removed two divers
 
-#and remove from df
-df$sex <- NULL
+df = rasch
 
-#schöne tabelle mit percent
-RIdemographics(dif.sex, "Sex")
+summary(df$age)
 
-#weiter mit age
-glimpse(df$age)
-
-#Erstelle ggplot für Altersverteilung
 ggplot(df) +
   geom_histogram(aes(x = age), 
                  fill = "#009ca6",
                  col = "black") +
   # add the average as a vertical line
-  geom_vline(xintercept = mean(df$age), 
+  geom_vline(xintercept = median(df$age), 
              linewidth = 1.5,
              linetype = 2,
              col = "orange") +
   # add a light grey field indicating the standard deviation
   annotate("rect", ymin = 0, ymax = Inf, 
-           xmin = (mean(df$age, na.rm = TRUE) - sd(df$age, na.rm = TRUE)), xmax = (mean(df$age, na.rm = TRUE) + sd(df$age, na.rm = TRUE)), 
+           xmin = summary(df$age)[2], 
+           xmax = summary(df$age)[5], 
            alpha = .2) +
   labs(title = "",
        x = "Age in years",
        y = "Number of respondents",
-       caption = glue("Note. Mean age is {round(mean(df$age, na.rm = T),1)} years with a standard deviation of {round(sd(df$age, na.rm = T),1)}. Age range is {min(df$age)} to {max(df$age)}.")
-  ) +
-  theme(plot.caption = element_text(hjust = 0, face = "italic"))
+       caption = str_wrap(glue("Note. Median age is {round(median(df$age, na.rm = T),1)}, shown with the dashed vertical line. Age range is {min(df$age)} to {max(df$age)}. Interquartile range ({summary(df$age)[2]} to {summary(df$age)[5]}) is indicated with the grey area.")
+       )) +
+  scale_x_continuous(limits = c(18,75)) +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust = 0, face = "italic")) 
 
-#remove age from df
-dif.age <- df$age
-df$age <- NULL
+dif <- df %>% 
+  select(sex,age,Population) %>% 
+  rename(Age = age) # just for consistency
 
-#check for missing data
+df <- df %>% 
+  select(!c(sex,age,Population))
+
+gtsummary::tbl_summary(dif)
+
+names(df) <- itemlabels$itemnr
+
 RImissing(df)
 
-#check overall responses
 RIallresp(df)
 
-#check for floor / ceiling effects
 RIrawdist(df)
-
-#While not really necessary, it could be interesting to see whether the response patterns follow a 
-#Guttman-like structure. Items and persons are sorted based on lower->higher responses, 
-#and we should see the color move from yellow in the lower left corner to blue in the upper right corner.
 
 RIheatmap(df) +
   theme(axis.text.x = element_blank())
 
-#It is usually recommended to have at least ~10 responses 
-#in each category for psychometric analysis, no matter which methodology is used.
-
 RItileplot(df)
 
-# item fit 
-simfit1 <- RIgetfit(df, iterations = 1000, cpu = 8) 
+simfit1 <- RIgetfit(df, iterations = 200, cpu = 8, ) # save simulation output to object `simfit1`
 RIitemfit(df, simfit1)
 
-# residual correlations
-simcor1 <- RIgetResidCor(df, iterations = 1000, cpu = 8)
+#df <- df %>% 
+  #select(!("ES_6"))
+
+# split 
+
+df1 = df[,1:5]
+df2 = df[, 6:10]
+
+simfit2 <- RIgetfit(df1, iterations = 200, cpu = 8, ) # save simulation output to object `simfit1`
+RIitemfit(df1, simfit2)
+
+simfit3 <- RIgetfit(df2, iterations = 200, cpu = 8, ) # save simulation output to object `simfit1`
+RIitemfit(df2, simfit3)
+
+#eigenvalue
+RIpcmPCA(df)
+pcasim <- RIbootPCA(df, iterations = 500, cpu = 8)
+hist(pcasim$results, breaks = 50)
+
+pcasim$p99
+
+pcasim$max
+
+# residual correlations / local independence
+
+simcor1 <- RIgetResidCor(df, iterations = 400, cpu = 8)
 RIresidcorr(df, cutoff = simcor1$p99)
 
-#PCA of residuals
-RIpcmPCA(df)
 
-#loadings on first residuals contrast
-RIloadLoc(df, model = "rm")
+RIdifTable(df, dif$Age)
+RIdifTable(df, dif$Population)
+RIdifTable2(df, dif$sex, dif$Age)
+
+RIdifTableLR(df, dif$Population)
+
+RIciccPlot(df, dif = "yes", dif_var = dif$sex)
+
+RIpfit(df)
+
+RIrestscore(df)
+
+fa.parallel(df, fa = "pc", n.iter = 100, show.legend = TRUE, main = "Parallel Analysis")

@@ -11,8 +11,10 @@ library(tidyr)
 library(dplyr)
 library(moments)
 library(psych)
-library(RISEkbmRasch)
+
 library(pROC)
+
+library(easyRasch)
 library(grateful)
 library(ggrepel)
 library(car)
@@ -170,6 +172,13 @@ characteristics_non <- data[, c(
 
 write.csv2(characteristics_non, file = "characteristics_non.csv")
 
+#create Rasch df 
+
+raschnon <- data %>%
+  select(starts_with("ES_"), Population, age, sex) %>%
+  select(-starts_with("ES_likert"), -ES_total)
+
+write.csv2(raschnon, file = "raschnon.csv")
 
 
 
@@ -502,20 +511,18 @@ rename <- dplyr::rename
 
 #select data
 
-df <- data %>% 
-  select(starts_with("ES_likert_"),
-         age,sex)  %>% 
-  select(!ES_likert_total) %>% 
-  select(!ES_likert_WHO)
+df <- data %>%
+  select(starts_with("ES_")) %>%
+  select(-starts_with("ES_likert"), -ES_total)
+
 
 glimpse(df)
 
-itemlabels <- df %>% 
-  select(starts_with("ES_likert_")) %>% 
-  names() %>% 
-  as_tibble() %>% 
-  separate(value, c(NA, "item"), sep ="_[0-9][0-9]_") %>% 
-  mutate(itemnr = paste0("ES_likert_",c(1:10)), .before = "item")
+itemlabels <- df %>%
+  select(starts_with("ES_")) %>%
+  names() %>%
+  tibble(item = .) %>%
+  mutate(itemnr = paste0("ES_", 1:10), .before = "item")
 
 #remove non-binär
 
