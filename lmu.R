@@ -138,7 +138,7 @@ summary_table <- lmu %>%
 
 
 
-flextable(summary_table)
+flextable::flextable(summary_table)
 
 
 # characteristics erstellen 
@@ -192,6 +192,27 @@ vars_to_remove <- c("Note", "Alter", "Geschlecht", "Aufnahmedatum", "Entlassdatu
                     "t0_sozanam_drogen", "t0_sozanam_drogen1")
 
 lmu <- lmu[, !(names(lmu) %in% vars_to_remove)]
+
+# check for missing data
+
+es_t0 = lmu[, grep("^t0_ES_(?!likert)", colnames(lmu), perl = TRUE)]
+es_likert_t0 = lmu[, grep("^t0_ES_likert", colnames(lmu), perl = TRUE)]
+bdi_t0 = lmu[, grep("^t0_BDI", colnames(lmu), perl = TRUE)]
+who_t0 = lmu[, grep("^t0_WHO", colnames(lmu), perl = TRUE)]
+cdrisc_t0 = lmu[, grep("^t0_CDRISC", colnames(lmu), perl = TRUE)]
+qol_t0 = lmu[, grep("^t0_WHOQOL", colnames(lmu), perl = TRUE)]
+bsi_t0 = lmu[, grep("^t0_BSI", colnames(lmu), perl = TRUE)]
+
+RImissing(es_t0)
+RImissing(es_likert_t0) #1 Item missing 7
+RImissing(bdi_t0)
+RImissing(who_t0)
+RImissing(cdrisc_t0)
+RImissing(qol_t0)
+RImissing(bsi_t0) # 1 Item: BSI 34 /  BSI 37 / BSI 38
+
+
+
 
 
 # clone df for longitudinal alanyses --------------------------------------
@@ -285,8 +306,8 @@ lmu$BDI_Group <- cut(lmu$BDI_total,
                       right = TRUE)
 
 # Berechnung der Summe der MINI_current und MINI_past Variablen
-mini_current_sum <- rowSums(lmu[, grep("^MINI_current_", colnames(lmu))], na.rm = TRUE)
-mini_past_sum <- rowSums(lmu[, grep("^MINI_past_", colnames(lmu))], na.rm = TRUE)
+mini_current_sum <- rowSums(lmu[, grep("^MINI_current_", colnames(lmu))])
+mini_past_sum <- rowSums(lmu[, grep("^MINI_past_", colnames(lmu))])
 
 # Codierung für Mini_lifetime_MDE (YES/NO)
 lmu$Mini_lifetime_MDE <- ifelse(mini_past_sum >= 0 & mini_past_sum <= 4, "NO", 
@@ -317,7 +338,7 @@ lmu$MINI_Group <- factor(lmu$MINI_Group, levels = c("Group0: No history of MDE -
                                                       "Group4: History of MDE + current subthreshold", 
                                                       "Group5: History of MDE + current MDE"))
 
-
+#lmu$Mini_lifetime_MDE
 
 
 # WHOQOL_bref
@@ -453,13 +474,31 @@ write.csv2(lmu_variables, file = "lmu_variables.csv")
 View(long)
 
 #Entferne Probanden ohne t1 Werte im WHO --> 7 !!, bleiben 25 übrig 
-long <- long %>%
+lmu <- lmu %>%
   filter(!is.na(t1_WHO5_1))
 
-long$t1_ES_likert_3[1] # diesen Wert muss du ändern 
+#check missings 
+es_t1 = lmu[, grep("^t1_ES_(?!likert)", colnames(lmu), perl = TRUE)]
+es_likert_t1 = lmu[, grep("^t1_ES_likert", colnames(lmu), perl = TRUE)]
+bdi_t1 = lmu[, grep("^t1_BDI", colnames(lmu), perl = TRUE)]
+who_t1 = lmu[, grep("^t1_WHO(?!BREF)", colnames(lmu), perl = TRUE)]
+cdrisc_t1 = lmu[, grep("^t1_CDRISC", colnames(lmu), perl = TRUE)]
+qol_t1 = lmu[, grep("^t1_WHOQOL", colnames(lmu), perl = TRUE)]
+bsi_t1 = lmu[, grep("^t1_BSI", colnames(lmu), perl = TRUE)]
+
+RImissing(es_t1)
+RImissing(es_likert_t1)
+RImissing(bdi_t1) # 1 Item BDI
+RImissing(who_t1)
+RImissing(cdrisc_t1)
+RImissing(qol_t1) # 1 Item BREF21 missing
+RImissing(bsi_t1) # 1 Item BSI 44
+
+long$t1_ES_likert_3[1] = 4 # diesen Wert muss du ändern --> zu 4 geändert
 
 # hier musst du nochmal mit imputieren für den ES_likert!!!
 # plus ein missing im BDI !
+
 
 # Summenvariablen erstellen
 long$t0_WHO5_total <- rowSums(long[, grep("^t0_WHO5_", names(long))], na.rm = TRUE)*4
