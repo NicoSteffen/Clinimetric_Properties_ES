@@ -104,8 +104,6 @@ RItileplot(df)
 simfit1 <- RIgetfit(df, iterations = 200, cpu = 8, ) 
 RIitemfit(df, simfit1)
 
-df
-
 # nononly = RIitemfit(df, simfit1)
 
 #df <- df %>% 
@@ -149,5 +147,4 @@ RIpfit(df)
 
 RIrestscore(df)
 
-fa.parallel(df, fa = "fa", quant = .95, n.iter = 1000, show.legend = TRUE)
-
+fa.parallel(df, fa = "pc", n.iter = 100, show.legend = TRUE, main = "Parallel Analysis")

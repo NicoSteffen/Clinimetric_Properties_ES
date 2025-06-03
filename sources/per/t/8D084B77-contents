@@ -588,30 +588,6 @@ ggplot(summary_stats, aes(x = timepoint, y = mean, group = variable)) +
 
 
 
-# Objective 6 -------------------------------------------------------------
-
-long$ES_change = long$t1_ES_total - long$t0_ES_total 
-long$ES_likert_change = long$t1_ES_likert_total - long$t0_ES_likert_total 
-long$ES_change_cent = long$ES_change - mean(long$ES_change)
-long$ES_likert_change_cent = long$ES_likert_change - mean(long$ES_likert_change)
-long$BDI_t0_cent = long$t0_BDI_total - mean(long$t0_BDI_total)
-
-model_es = lm(BDI_change ~ ES_change_cent + BDI_t0_cent, data = long )
-summary(model_es)
-
-model_likert = lm(BDI_change ~ ES_likert_change_cent + BDI_t0_cent, data = long )
-summary(model_likert)
-
-
-# Vorraussetzungen
-
-shapiro.test(rstandard(model_es)) # passt!
-shapiro.test(rstandard(model_likert)) #passt
-
-plot(model_es, 1, cex = 2) # passt
-plot(model_likert, 1, cex = 2) #passt
-
-
 es = t.test(long$t0_ES_total, long$t1_ES_total, data = long, var.equal = T)
 effectsize::cohens_d(es)
 
@@ -652,5 +628,4 @@ write.csv2(long, file = "long.csv", row.names = FALSE)
 
 table(long$BDI_responder)
 table(long$WHO_responder)
-
-long$t0_ES_total
+      

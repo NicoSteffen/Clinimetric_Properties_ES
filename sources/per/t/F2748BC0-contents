@@ -513,102 +513,72 @@ par(mfrow = c(1, 1))
 # Question 3 Predict responder---------------------------------------------------------------
 
 
+# WHO-5 -------------------------------------------------------------------
+library(mlr)
+
+library(mlr)
+
+# Sicherstellen, dass Zielvariable ein Faktor ist
+long$WHO_responder <- factor(long$WHO_responder, levels = c("No", "Yes"))
+
+# Subsets erstellen
+WHO_dichotom <- data.frame(total = long$t0_ES_total, response = long$WHO_responder)
+WHO_likert <- data.frame(total = long$t0_ES_likert_total, response = long$WHO_responder)
+
+# Modell erstellen (klassisch)
+mod <- glm(response ~ total, data = WHO_dichotom, family = "binomial")
+summary(mod)
+
+# Vorhersage testen
+predict(mod, newdata = WHO_dichotom, type = "response")
+
+# mlr: Klassifikations-Task
+task <- makeClassifTask(target = "response", positive = "Yes", data = WHO_dichotom)
+log <- makeLearner("classif.logreg", predict.type = "prob")
+
+# Resampling-Strategie
+desc <- makeResampleDesc(method = "RepCV", folds = 5L, reps = 10L)
+
+# Metriken definieren
+measures <- list(auc, acc, mmce)
+
+# Benchmark starten
+bmr1 <- benchmark(learners = log, tasks = task, resamplings = desc, measures = measures)
+
+
+
+
 # Question 4 ---------------------------------------------------------------
 
 
 # Question 5 ---------------------------------------------------------------
 
 #Group 3 ausschließen da nicht in Japanese Study und nur 3 Pax!
-library(clinfun)
-library(rstatix)
-library(effectsize)
-library(boot)
+# in lmu 2 x NA in Lifetime!!
 
-mini = data
-mini <- mini[mini$MINI_Group != "Group3: First depressive episode", ]
+d <- data[data$MINI_Group != "Group3: First depressive episode", ]
 
 
-table(mini$MINI_Group)
 #dichtotom
-# model = lm(ES_total ~ MINI_Group, data = mini)
-# anova(model)
-# 
-# emmeans::emmeans(model, pairwise ~ MINI_Group)
-# eta_squared(model, partial = FALSE) 
+model = lm(ES_total ~ MINI_Group, data = d)
+anova(model)
 
-jonckheere.test(x = mini$ES_total, g = mini$MINI_Group, alternative = "decreasing")
+emmeans::emmeans(model, pairwise ~ MINI_Group)
 
-# welchs? 
-
-model = oneway.test(ES_total ~ MINI_Group, data = mini, var.equal = FALSE)
-mini %>%
-  games_howell_test(ES_total ~ MINI_Group)
+install.packages("clinfun")
+library(clinfun)
 
 
-# 1. Create a function to calculate omega squared
-omega_sq_fn <- function(data, indices) {
-  d <- data[indices, ]
-  model <- aov(ES_total ~ MINI_Group, data = d)
-  est <- omega_squared(model, ci = NULL)
-  return(est$Omega2)
-}
-
-# 2. Prepare your data frame
-df <- mini[!is.na(mini$ES_total) & !is.na(mini$MINI_Group), ]
-
-# 3. Run bootstrapping (e.g., 1000 resamples)
-set.seed(123)  # for reproducibility
-boot_omega <- boot(data = df, statistic = omega_sq_fn, R = 1000)
-
-# 4. View results
-boot_omega
-boot.ci(boot_omega, type = "perc")  # percentile CI
+jonckheere.test(x = d$ES_total, g = d$MINI_Group, alternative = "decreasing")
 
 
-
-
+?JonckheereTest
 
 #likert
-# model = lm(ES_likert_total ~ MINI_Group, data = mini)
-# anova(model)
-# 
-# emmeans::emmeans(model, pairwise ~ MINI_Group)
-# eta_squared(model, partial = FALSE)
+model = lm(ES_likert_total ~ MINI_Group, data = d)
+anova(model)
 
-jonckheere.test(x = mini$ES_likert_total, g = mini$MINI_Group, alternative = "decreasing")
-
-# Welchws anova? 
-model = oneway.test(ES_likert_total ~ MINI_Group, data = mini, var.equal = FALSE)
-effectsize::eta_squared(model, partial = FALSE) 
-
-# Games-Howell post-hoc test
-mini %>%
-  games_howell_test(ES_likert_total ~ MINI_Group)
-
-# 1. Create a function to calculate omega squared
-omega_sq_fn2 <- function(data, indices) {
-  d <- data[indices, ]
-  model <- aov(ES_likert_total ~ MINI_Group, data = d)
-  est <- omega_squared(model, ci = NULL)
-  return(est$Omega2)
-}
-
-# 3. Run bootstrapping (e.g., 1000 resamples)
-set.seed(123)  # for reproducibility
-boot_omega <- boot(data = df, statistic = omega_sq_fn2, R = 1000)
-
-# 4. View results
-boot_omega
-boot.ci(boot_omega, type = "perc")  # percentile CI
-
-
-# assumptions
-
-car::leveneTest(ES_total ~ MINI_Group, data = mini, center = "mean") # nope
-car::leveneTest(ES_likert_total ~ MINI_Group, data = mini, center = "mean") # nope
-
-by(mini$ES_total, mini$MINI_Group, shapiro.test) # nope
-by(mini$ES_likert_total, mini$MINI_Group, shapiro.test) # OK
+emmeans::emmeans(model, pairwise ~ MINI_Group)
 
 # Question 6 ---------------------------------------------------------------
 

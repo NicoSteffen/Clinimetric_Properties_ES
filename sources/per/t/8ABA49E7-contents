@@ -18,15 +18,8 @@ library(formattable)
 library(glue)
 library(foreach)
 
-select <- dplyr::select
-count <- dplyr::count
-recode <- car::recode
-rename <- dplyr::rename
-
 raschlmu = read.csv2("raschlmu.csv")
 raschnon = read.csv2("raschnon.csv")
-
-#rasch = raschnon
 
 rasch = rbind(raschlmu,raschnon )
 rasch = rasch[,2:14]
@@ -40,13 +33,13 @@ rasch <- rasch %>%
   mutate(across(c(age, starts_with("ES_")), as.double))
 
 itemlabels <- rasch %>%
-  dplyr::select(starts_with("ES_")) %>%
+  select(starts_with("ES_")) %>%
   names() %>%
   tibble(item = .) %>%
   mutate(itemnr = paste0("ES_", 1:10), .before = "item")
 
 rasch %>% 
-  dplyr::select(sex,age,Population) %>% 
+  select(sex,age,Population) %>% 
   glimpse()
 
 rasch <- rasch %>% 
@@ -101,26 +94,19 @@ RIheatmap(df) +
 
 RItileplot(df)
 
-simfit1 <- RIgetfit(df, iterations = 200, cpu = 8, ) 
+simfit1 <- RIgetfit(df, iterations = 200, cpu = 8, ) # save simulation output to object `simfit1`
 RIitemfit(df, simfit1)
-
-df
-
-# nononly = RIitemfit(df, simfit1)
-
-#df <- df %>% 
-  #select(!("ES_6"))
 
 # split 
 
-# df1 = df[,1:5]
-# df2 = df[, 6:10]
-# 
-# simfit2 <- RIgetfit(df1, iterations = 200, cpu = 8, ) # save simulation output to object `simfit1`
-# RIitemfit(df1, simfit2)
-# 
-# simfit3 <- RIgetfit(df2, iterations = 200, cpu = 8, ) # save simulation output to object `simfit1`
-# RIitemfit(df2, simfit3)
+df1 = df[,1:5]
+df2 = df[, 6:10]
+
+simfit2 <- RIgetfit(df1, iterations = 200, cpu = 8, ) # save simulation output to object `simfit1`
+RIitemfit(df1, simfit2)
+
+simfit3 <- RIgetfit(df2, iterations = 200, cpu = 8, ) # save simulation output to object `simfit1`
+RIitemfit(df2, simfit3)
 
 #eigenvalue
 RIpcmPCA(df)
@@ -137,17 +123,4 @@ simcor1 <- RIgetResidCor(df, iterations = 400, cpu = 8)
 RIresidcorr(df, cutoff = simcor1$p99)
 
 
-RIdifTable(df, dif$Age)
-RIdifTable(df, dif$Population)
-RIdifTable2(df, dif$sex, dif$Age)
-
-RIdifTableLR(df, dif$Population)
-
-RIciccPlot(df, dif = "yes", dif_var = dif$sex)
-
-RIpfit(df)
-
-RIrestscore(df)
-
-fa.parallel(df, fa = "fa", quant = .95, n.iter = 1000, show.legend = TRUE)
 

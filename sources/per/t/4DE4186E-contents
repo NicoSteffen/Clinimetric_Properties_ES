@@ -1,0 +1,253 @@
+library(knitr)
+library(emmeans)
+library(flextable)
+library(effectsize)
+library(car)
+library(faux)
+library(ggplot2)
+library(psych)
+
+roundallpsychroundallnumerics = function(df, digits){
+  for(j in 1:ncol(df)){
+    if(is.numeric(df[,j])){
+      df[,j] = round(df[,j], digits)
+    }
+  }
+  return(df)
+}
+
+
+# ANOVA -------------------------------------------------------------------
+
+# ANOVA
+# Daten für die drei Lernmethoden
+methode_A <- c(8, 7, 6, 9, 8, 8)
+methode_B <- c(6, 5, 5, 7, 6, 6)
+methode_C <- c(7, 8, 6, 8, 9, 7)
+# Zusammenführen der Daten in einem Data Frame
+daten <- data.frame(
+  Methode = factor(rep(c("A", "B", "C"), each = 6)),
+  Leistung = c(methode_A, methode_B, methode_C)
+)
+
+# Ausgabe der Daten
+print(daten)
+
+describe(methode_C)
+
+
+
+# ANOVA durchführen
+anova_ergebnis <- lm(Leistung ~ Methode, data = daten)
+anova(anova_ergebnis)
+
+emmeans::emmeans(anova_ergebnis, pairwise ~ Methode)
+
+flextable::flextable(daten)
+
+car::leveneTest(anova_ergebnis, center = mean)
+
+by(daten$Leistung, daten$Methode, shapiro.test)
+
+effsize::print.effsize(anova_ergebnis)
+
+omega_squared(anova_ergebnis)
+
+
+
+# Regression --------------------------------------------------------------
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Simuliere die Anzahl der Lernstunden pro Woche (zwischen 1 und 20)
+lernstunden <- runif(150, min = 1, max = 20)
+
+# Simuliere die Gedächtnistest-Punktzahl (abhängig von den Lernstunden mit zufälligem Fehler)
+test <- 5 + 1.23 * lernstunden + rnorm(150, mean = 0, sd = 10)
+
+# Erstelle einen Data Frame
+daten <- data.frame(Lernstunden = lernstunden, Testergebnis = test)
+
+# Ausgabe des Datensatzes
+print(head(daten))
+
+
+mean_x <- round(mean(daten$Lernstunden), 3)
+sd_x <- round(sd(daten$Lernstunden), 3)
+mean_y <- round(mean(daten$Testergebnis),3)
+sd_y <- round(sd(daten$Testergebnis),3)
+
+# Calculate Pearson correlation
+correlation_xy <- round(cor(daten$Lernstunden, daten$Testergebnis),3)
+
+# Create a table with the results
+summary_table <- data.frame(
+  Variable = c("Lernstunden", "Testergebnis"),
+  Mean = c(mean_x, mean_y),
+  SD = c(sd_x, sd_y),
+  r = c(correlation_xy, NA)  # Only include correlation once
+)
+
+# Display the table
+
+flextable(summary_table)
+
+model = lm (Testergebnis ~ Lernstunden, daten)
+summary(model)
+
+# Chi Square --------------------------------------------------------------
+
+# Beobachtete Verteilung der beliebtesten Haustiere
+Haustier <- c(rep("Hund", 50), rep("Katze", 40), rep("Vogel", 30))
+
+# Häufigkeitstabelle der beobachteten Verteilung
+table(Haustier)
+
+prob.table(Haustier)
+
+
+# Erwartete Verteilung: 40% Hund, 35% Katze, 25% Vogel
+erwartete_verteilung <- c(0.40, 0.35, 0.25)
+
+# Chi-Quadrat-Test durchführen
+chisq_test <- chisq.test(table(Haustier), p = erwartete_verteilung)
+chisq_test
+
+# Chi Square Eindimensional (2 Stufen)
+
+# Beobachtete Verteilung der Antworten
+Antwort <- c(rep("Zustimmung", 80), rep("Ablehnung", 20))
+
+# Häufigkeitstabelle der beobachteten Verteilung
+table(Antwort)
+
+# Erwartete Verteilung: 60% Zustimmung, 40% Ablehnung
+erwartete_verteilung <- c(0.40, 0.60)
+
+# Chi-Quadrat-Test durchführen
+chisq_test <- chisq.test(table(Antwort), p = erwartete_verteilung)
+chisq_test
+
+omega(chisq_test)
+
+# Chi^2 Vierfelder
+
+# Erstellen der Kontingenztabelle mit den beobachteten Häufigkeiten
+rauchdaten <- matrix(c(400, 600, 300, 700), nrow = 2, byrow = TRUE)
+dimnames(rauchdaten) <- list(
+  Geschlecht = c("Männlich", "Weiblich"),
+  Rauchen = c("Raucher", "Nichtraucher")
+)
+
+# Ausgabe der Kontingenztabelle
+print(rauchdaten)
+
+# Chi-Quadrat-Test durchführen
+chisq_test <- chisq.test(rauchdaten, correct = FALSE)
+chisq_test
+
+
+
+# Multiple Regression  ----------------------------------------------------
+
+# Simuliere die Daten
+
+df = data.frame(Produktivität = round(rnorm(50, 70, 10)))
+
+# Kaffee hat einen positiven Effekt auf Produktivität (direkt proportional)
+df$Kaffee = round(faux::rnorm_pre(df$Produktivität, mu = 20, sd = 3, r = 0.0, empirical = TRUE))
+
+# Überstunden haben einen negativen Effekt auf Produktivität
+df$Überstunden = round(faux::rnorm_pre(df$Produktivität, mu = 10, sd = 2, r = -1.0, empirical = TRUE))
+
+df$Produktivität <- 50 + 5 * df$Kaffee - 3 * df$Überstunden + 1.5 * (df$Kaffee * df$Überstunden) + rnorm(50, 0, 20)
+
+
+# Erstelle das Regressionsmodell mit Interaktion
+model3 = lm(Produktivität ~ Kaffee * Überstunden, data = df)
+summary(model3)
+
+ggplot2::ggplot(df, aes(x = Überstunden, y = Produktivität )) +
+         geom_smooth() +
+         geom_point()
+
+
+
+
+# Regression stetig und kategorial
+
+# Seed setzen für Reproduzierbarkeit
+set.seed(122)
+
+# Daten simulieren
+df <- data.frame(
+  Fitness = NA,
+  TrainerErfahrung = sample(1:2, 150, replace = TRUE, prob = c(0.5, 0.5)),
+  Trainingseinheiten = round(runif(150, min = 5, max = 50))
+)
+df$TrainerErfahrung <- factor(df$TrainerErfahrung, levels = 1:2, labels = c("Niedrig", "Hoch"))
+
+# Fitnessverbesserung simulieren
+library(faux)
+df$Fitness[df$TrainerErfahrung == "Niedrig"] <- round(faux::rnorm_pre(df$Trainingseinheiten[df$TrainerErfahrung == "Niedrig"], mu = 35, sd = 8, r = 0.3))
+df$Fitness[df$TrainerErfahrung == "Hoch"] <- round(faux::rnorm_pre(df$Trainingseinheiten[df$TrainerErfahrung == "Hoch"], mu = 55, sd = 8, r = 0.8))
+
+# Multiple Regression mit Interaktion durchführen
+regression <- lm(Fitness ~ TrainerErfahrung * Trainingseinheiten, data = df)
+summary(regression)
+
+# Plot erstellen
+
+ggplot(df, aes(x = Trainingseinheiten, y = Fitness, color = TrainerErfahrung)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Streudiagramm: Trainingseinheiten vs. Fitnessverbesserung",
+       x = "Trainingseinheiten",
+       y = "Fitnessverbesserung (0-100)") +
+  theme_minimal() +
+  theme(text = element_text(size = 15))
+
+# Untersuchung des Interaktionseffekts
+library(emmeans)
+emtrends_result <- emtrends(regression, pairwise ~ TrainerErfahrung, var = "Trainingseinheiten")
+emtrends_result
+
+
+# Regression mit Interaktion diskret x diskret
+
+# Seed setzen für Reproduzierbarkeit
+set.seed(123)
+
+# Simuliere die Daten
+n <- 150  # Anzahl der Beobachtungen
+
+# Diskrete Prädiktoren: Lernstrategie und Motivation
+df <- data.frame(
+  Lernstrategie = factor(sample(c("A", "B"), n, replace = TRUE)),
+  Motivation = factor(sample(c("Niedrig", "Hoch"), n, replace = TRUE))
+)
+
+# Simuliere das Lernergebnis (Kriterium) mit Haupteffekten und Interaktion
+df$Lernergebnis <- with(df, 
+                        ifelse(Lernstrategie == "A" & Motivation == "Niedrig", rnorm(n, mean = 60, sd = 5),
+                               ifelse(Lernstrategie == "A" & Motivation == "Hoch", rnorm(n, mean = 65, sd = 5),
+                                      ifelse(Lernstrategie == "B" & Motivation == "Niedrig", rnorm(n, mean = 70, sd = 5),
+                                             rnorm(n, mean = 80, sd = 5)))))
+
+# Regression mit Interaktion
+df$Motivation <- relevel(df$Motivation, ref = "Niedrig")
+
+model <- lm(Lernergebnis ~ Lernstrategie * Motivation, data = df)
+summary(model)
+
+# Streudiagramm zur Veranschaulichung der Interaktion
+library(ggplot2)
+ggplot(df, aes(x = Lernstrategie, y = Lernergebnis, fill = Motivation)) +
+  geom_boxplot() +
+  labs(title = "Interaktion zwischen Lernstrategie und Motivation",
+       x = "Lernstrategie",
+       y = "Lernergebnis") +
+  theme_minimal() +
+  theme(text = element_text(size = 15))
+
