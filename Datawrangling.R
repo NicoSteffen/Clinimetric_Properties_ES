@@ -14,25 +14,7 @@ library(psych)
 
 library(pROC)
 
-library(easyRasch)
-library(grateful)
-library(ggrepel)
-library(car)
-library(kableExtra)
-library(readxl)
-library(eRm)
-library(iarm)
-library(mirt)
-library(psych)
-library(ggplot2)
-library(psychotree)
-library(matrixStats)
-library(reshape)
-library(knitr)
-library(patchwork)
-library(formattable) 
-library(glue)
-library(foreach)
+
 
 
 
@@ -536,7 +518,7 @@ table(mini$MINI_Group)
 # emmeans::emmeans(model, pairwise ~ MINI_Group)
 # eta_squared(model, partial = FALSE) 
 
-jonckheere.test(x = mini$ES_total, g = mini$MINI_Group, alternative = "decreasing")
+jonckheere.test(x = mini$ES_total, g = mini$MINI_Group, alternative = "decreasing", nperm = 10000)
 
 # welchs? 
 
@@ -565,9 +547,6 @@ boot_omega
 boot.ci(boot_omega, type = "perc")  # percentile CI
 
 
-
-
-
 #likert
 # model = lm(ES_likert_total ~ MINI_Group, data = mini)
 # anova(model)
@@ -575,7 +554,7 @@ boot.ci(boot_omega, type = "perc")  # percentile CI
 # emmeans::emmeans(model, pairwise ~ MINI_Group)
 # eta_squared(model, partial = FALSE)
 
-jonckheere.test(x = mini$ES_likert_total, g = mini$MINI_Group, alternative = "decreasing")
+jonckheere.test(x = mini$ES_likert_total, g = mini$MINI_Group, alternative = "decreasing", nperm = 10000)
 
 # Welchws anova? 
 model = oneway.test(ES_likert_total ~ MINI_Group, data = mini, var.equal = FALSE)
@@ -610,6 +589,73 @@ car::leveneTest(ES_likert_total ~ MINI_Group, data = mini, center = "mean") # no
 by(mini$ES_total, mini$MINI_Group, shapiro.test) # nope
 by(mini$ES_likert_total, mini$MINI_Group, shapiro.test) # OK
 
+
+# BDI --------------------------------------------------------
+
+# assumptions
+
+car::leveneTest(ES_total ~ BDI_Group, data = data, center = "mean") # nope
+car::leveneTest(ES_likert_total ~ BDI_Group, data = data, center = "mean") # ok
+
+by(data$ES_total, data$BDI_Group, shapiro.test) # nope
+by(data$ES_likert_total, data$BDI_Group, shapiro.test) # nope
+
+# order for Jonckheere: 
+
+data$BDI_Group <- factor(data$BDI_Group,
+                         levels = c("Group0: no depression / clinical irrelevant",
+                                    "Group1: mild depression",
+                                    "Group2: moderate depression",
+                                    "Group3: severe depression"),
+                         ordered = TRUE)
+
+
+# ES
+
+jonckheere.test(x = data$ES_total, g = data$BDI_Group, alternative = "decreasing", nperm = 10000)
+
+model = oneway.test(ES_total ~ BDI_Group, data = data, var.equal = FALSE)
+mini %>%
+  games_howell_test(ES_total ~ BDI_Group)
+
+
+# Omega Bootstrap
+omega_sq_fn <- function(data, indices) {
+  d <- data[indices, ]
+  model <- aov(ES_total ~ BDI_Group, data = d)
+  est <- omega_squared(model, ci = NULL)
+  return(est$Omega2)
+}
+
+df <- mini[!is.na(data$ES_total) & !is.na(data$BDI_Group), ]
+
+set.seed(123)  
+boot_omega <- boot(data = df, statistic = omega_sq_fn, R = 1000)
+
+# ES_likert
+
+jonckheere.test(x = data$ES_likert_total, g = data$BDI_Group, alternative = "decreasing", nperm = 10000)
+
+model = oneway.test(ES_likert_total ~ BDI_Group, data = data, var.equal = FALSE)
+mini %>%
+  games_howell_test(ES_likert_total ~ BDI_Group)
+
+
+# Omega Bootstrap
+omega_sq_fn <- function(data, indices) {
+  d <- data[indices, ]
+  model <- aov(ES_likert_total ~ BDI_Group, data = d)
+  est <- omega_squared(model, ci = NULL)
+  return(est$Omega2)
+}
+
+df <- mini[!is.na(data$ES_likert_total) & !is.na(data$BDI_Group), ]
+
+set.seed(123)  
+boot_omega <- boot(data = df, statistic = omega_sq_fn, R = 1000)
+
+
+
 # Question 6 ---------------------------------------------------------------
 
 #dichtotom
@@ -629,47 +675,7 @@ emmeans::emmeans(model, pairwise ~ BDI_Group)
 # Question 7 Cut off Score---------------------------------------------------------------
 
 
-# Create binary variable for MDE based on BDI cutoff
-data$MDE <- ifelse(data$BDI_total >= 13, 1, 0)
 
-# Perform ROC analysis
-roc_result <- roc(data$MDE, data$ES_total)
-
-
-# Plot ROC curve
-plot(roc_result, main="ROC Curve for ES Cutoff")
-
-# Determine optimal cutoff using Youden's J statistic
-optimal_cutoff <- coords(roc_result, "best", ret = "threshold", best.method = "youden")
-
-# Print the optimal cutoff
-print(optimal_cutoff)
-
-cutoff_data <- data.frame(
-  Threshold = roc_result$thresholds,
-  Sensitivity = roc_result$sensitivities,
-  Specificity = roc_result$specificities
-)
-
-# Alternative mit MINI
-
-data$MDE_MINI <- ifelse(data$Mini_current_MDE == "MDE", 1, 0)
-
-# Perform ROC analysis
-roc_result <- roc(data$MDE_MINI, data$ES_total)
-
-# Plot ROC curve
-plot(roc_result, main="ROC Curve for ES Cutoff")
-
-# Determine optimal cutoff using Youden's J statistic
-optimal_cutoff <- coords(roc_result, "best", ret = "threshold", best.method = "youden")
-
-# Print the optimal cutoff
-print(optimal_cutoff)
-
-test = data.frame(data$MDE, data$MDE_MINI)
-
-#--> Weniger Diagnosen MDE nach MINI als BDI
 
 # Question 8 ---------------------------------------------------------------
 
