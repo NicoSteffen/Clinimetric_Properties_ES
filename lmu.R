@@ -136,7 +136,7 @@ summary_table <- lmu %>%
     n = n()
   )
 
-
+sd(lmu$Alter)
 
 flextable::flextable(summary_table)
 
@@ -589,6 +589,7 @@ ggplot(summary_stats, aes(x = timepoint, y = mean, group = variable)) +
 
 
 # Objective 6 -------------------------------------------------------------
+library(rsq)
 
 long$ES_change = long$t1_ES_total - long$t0_ES_total 
 long$ES_likert_change = long$t1_ES_likert_total - long$t0_ES_likert_total 
@@ -602,6 +603,14 @@ summary(model_es)
 model_likert = lm(BDI_change ~ ES_likert_change_cent + BDI_t0_cent, data = long )
 summary(model_likert)
 
+
+rsq.partial(model_es, adj = FALSE)
+rsq.partial(model_likert, adj = FALSE)
+
+
+
+model = lm(BDI_change ~ ES_likert_change_cent, data = long )
+summary(model)
 
 # Vorraussetzungen
 

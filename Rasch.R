@@ -151,3 +151,4 @@ RIrestscore(df)
 
 fa.parallel(df, fa = "fa", quant = .95, n.iter = 1000, show.legend = TRUE)
 
+

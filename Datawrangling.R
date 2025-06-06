@@ -487,6 +487,10 @@ par(mfrow = c(1, 1))
 
 
 
+
+car::leveneTest(ES_total ~ Population, data = data, center = "mean")
+car::leveneTest(ES_likert_total ~ Population, data = data, center = "mean")
+
 # Question 2 Rasch---------------------------------------------------------------
 
 
@@ -674,7 +678,34 @@ emmeans::emmeans(model, pairwise ~ BDI_Group)
 
 # Question 7 Cut off Score---------------------------------------------------------------
 
+# (non-clinical: ≥13, clinical: ≥19)
 
+non_clinical = data[data$Population == "nicht-klinisch",]
+clinical = data[data$Population == "klinisch",]
+
+non_clinical$depr = ifelse(non_clinical$BDI_total >= 13, 1, 0)
+table(non_clinical$depr)
+
+clinical$depr = ifelse(clinical$BDI_total >= 19, 1, 0)
+table(clinical$depr)
+
+roc_nc = roc(non_clinical$depr, non_clinical$ES_total, smooth = F, auc = T, plot = T )
+
+roc_c = roc(clinical$depr, clinical$ES_total, smooth = F, auc = T, plot = T )
+
+# Cutoff nach Youden's J
+coords(roc_nc, 
+       x = "best", best.method = "youden", ret = c("threshold", "sensitivity", "specificity"))
+coords(roc_nc, x = 8, input = "threshold", ret = c("sensitivity", "specificity"))
+coords(roc_nc, x = 7, input = "threshold", ret = c("sensitivity", "specificity"))
+
+
+coords(roc_c, 
+       x = "best", best.method = "youden", ret = c("threshold", "sensitivity", "specificity"))
+coords(roc_c, x = 4, input = "threshold", ret = c("sensitivity", "specificity"))
+coords(roc_c, x = 5, input = "threshold", ret = c("sensitivity", "specificity"))
+
+ggroc(roc_nc)
 
 
 # Question 8 ---------------------------------------------------------------
@@ -692,17 +723,40 @@ model = lm(BDI_change ~ long$ES_likert_change_cent + long$BDI_t0_cent, data = lo
 summary(model)
 
 
-# Question 9 ---------------------------------------------------------------
+# Question 10 ---------------------------------------------------------------
 
-#dichotom
-model = lm(GSI ~ ES_total, data)
-summary(model)
+df = cbind(non_clinical, characteristics_non)
 
-#likert
 
-model = lm(GSI ~ ES_likert_total, data)
-summary(model)
 
+es = lm(PWB_total ~ sex + age + Bildungsabschluss + WHO_total , data = df)
+summary(es)
+
+es1 = lm(PWB_total ~ sex + age + Bildungsabschluss + WHO_total + ES_total , data = df)
+summary(es1)
+
+anova(es, es1)
+
+
+
+es2 = lm(PWB_total ~ sex + age + Bildungsabschluss + WHO_total + ES_likert_total , data = df)
+summary(es2)
+
+anova(es, es2)
+
+
+# Vorraussetzungen
+
+shapiro.test(rstandard(es)) # passt!
+shapiro.test(rstandard(es1)) #passt
+shapiro.test(rstandard(es2))
+
+
+plot(es, 1, cex = 2) # passt
+plot(es1, 1, cex = 2) #passt
+plot(es2, 1, cex = 2)
+
+describe(df$PWB_total)
 
 # Question 10 ---------------------------------------------------------------
 
