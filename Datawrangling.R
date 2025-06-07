@@ -510,17 +510,7 @@ library(rstatix)
 library(effectsize)
 library(boot)
 
-mini = data
-mini <- mini[mini$MINI_Group != "Group3: First depressive episode", ]
-
-
-table(mini$MINI_Group)
-#dichtotom
-# model = lm(ES_total ~ MINI_Group, data = mini)
-# anova(model)
-# 
-# emmeans::emmeans(model, pairwise ~ MINI_Group)
-# eta_squared(model, partial = FALSE) 
+mini = subset(data, MINI_Group != "Group3: First depressive episode")
 
 jonckheere.test(x = mini$ES_total, g = mini$MINI_Group, alternative = "decreasing", nperm = 10000)
 
@@ -552,23 +542,17 @@ boot.ci(boot_omega, type = "perc")  # percentile CI
 
 
 #likert
-# model = lm(ES_likert_total ~ MINI_Group, data = mini)
-# anova(model)
-# 
-# emmeans::emmeans(model, pairwise ~ MINI_Group)
-# eta_squared(model, partial = FALSE)
 
 jonckheere.test(x = mini$ES_likert_total, g = mini$MINI_Group, alternative = "decreasing", nperm = 10000)
 
 # Welchws anova? 
 model = oneway.test(ES_likert_total ~ MINI_Group, data = mini, var.equal = FALSE)
-effectsize::eta_squared(model, partial = FALSE) 
 
-# Games-Howell post-hoc test
 mini %>%
   games_howell_test(ES_likert_total ~ MINI_Group)
 
-# 1. Create a function to calculate omega squared
+
+# omega
 omega_sq_fn2 <- function(data, indices) {
   d <- data[indices, ]
   model <- aov(ES_likert_total ~ MINI_Group, data = d)
@@ -747,8 +731,8 @@ anova(es, es2)
 
 # Vorraussetzungen
 
-shapiro.test(rstandard(es)) # passt!
-shapiro.test(rstandard(es1)) #passt
+shapiro.test(rstandard(es)) 
+shapiro.test(rstandard(es1)) 
 shapiro.test(rstandard(es2))
 
 
@@ -758,136 +742,24 @@ plot(es2, 1, cex = 2)
 
 describe(df$PWB_total)
 
-# Question 10 ---------------------------------------------------------------
 
 
-model1 = lm(PWB_total ~ sex + age + Bildungsabschluss + WHO_total, data)
-model2 = lm(PWB_total ~ sex + age + Bildungsabschluss + WHO_total + ES_likert_total, data)
 
-anova(model1,model2)
 
-summary(model1)
-summary(model2)
 
-view(data)
 
-cor(data$PWB_Autonomy,data$ES_likert_total)
 
-plot(data$PWB_total~data$ES_likert_total)
-plot(data$PWB_Autonomy~data$ES_likert_total)
-plot(data$PWB_Environmental_Mastery~data$ES_likert_total)
 
-PWB_Autonomy
-PWB_Environmental_Mastery
 
-# Komische korrelation zu PWB!!! Anschauen warum? Richtig codiert?
 
 
 
-# Question 11 -------------------------------------------------------------
 
 
 
 
 
 
-
-
-
-cor.test(data$ES_likert_WHO, data$WHO_total)
-
-t.test(data$ES_likert_WHO,data$WHO_total )
-
-#stelle des Fragebogens weiter hinten -> negativer weil davor negative Fragebögen abgefragt wurden 
-# oder beeinflussen die ersten 5 Fragen der ES die Antwort? --> Forschungsidee!!!
-
-# Interessante Forschungsfrage!!!
-mean(data$ES_likert_WHO)
-mean(data$WHO_total)
-
-model = lm(ES_total ~ MINI_Group, data = data)
-anova(model)
-
-emmeans::emmeans(model, pairwise ~ MINI_Group)
-
-
-
-
-
-
-
-
-
-
-
-model = lm(BDI_total ~ ES_total, data = data)
-summary(model)
-
-model2 = lm(BDI_total ~ ES_likert_total, data = data)
-summary(model2)
-
-
-
-
-
-
-# Faktorenanalyse ---------------------------------------------------------
-
-
-# Perform parallel analysis
-fa.parallel(data_ES, fa = "fa", n.iter = 100, show.legend = TRUE, main = "Parallel Analysis")
-
-
-
-data_ES
-data_ES_likert
-
-
-efa_result <- fa(data_ES_likert, nfactors = 2, rotate = "promax")
-
-
-
-
-# Define the model
-model2 <- '
-  Factor1 =~ ES_1 + ES_2 + ES_3 + ES_4 + ES_5
-  Factor2 =~ ES_6 + ES_7 + ES_8 + ES_9 + ES_10
-'
-
-# Assuming 'data' contains your items
-cfa_result2 <- cfa(model2, data = data_ES)
-
-# Summarize the results
-summary(cfa_result2, fit.measures = TRUE, standardized = TRUE)
-
-
-# Define the model
-model <- '
-  Factor1 =~ ES_likert_1 + ES_likert_2 + ES_likert_3 + ES_likert_4 + ES_likert_5
-  Factor2 =~ ES_likert_6 + ES_likert_7 + ES_likert_8 + ES_likert_9 + ES_likert_10
-'
-
-# Assuming 'data' contains your items
-cfa_result <- cfa(model, data = data_ES_likert)
-
-# Summarize the results
-summary(cfa_result, fit.measures = TRUE, standardized = TRUE)
-
-
-model = lm(BDI_total ~ ES_likert_total, data)
-summary(model)
-
-
-
-# zeug s
-
-mod = lm(PWB_total~sex+age+Beziehungsstatus+Beschaeftigungsverhaeltnis+Bildungsabschluss+Einkommen+Wohnsituation, data = data)
-summary(mod)
-
-mod = lm(PWB_Purpose_of_life~sex+age+Beziehungsstatus+Beschaeftigungsverhaeltnis+Bildungsabschluss+Einkommen+Wohnsituation, data = data)
-summary(mod)
-
-names(data)
 
 
 

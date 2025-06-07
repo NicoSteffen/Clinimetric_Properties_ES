@@ -150,5 +150,7 @@ RIpfit(df)
 RIrestscore(df)
 
 fa.parallel(df, fa = "fa", quant = .95, n.iter = 1000, show.legend = TRUE)
+mtext("Parallel analysis suggests that the number of factors = 1", side = 1, line = 4, cex = 0.9)
 
 
+           
