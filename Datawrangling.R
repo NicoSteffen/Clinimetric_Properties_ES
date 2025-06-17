@@ -664,6 +664,8 @@ emmeans::emmeans(model, pairwise ~ BDI_Group)
 
 # (non-clinical: ≥13, clinical: ≥19)
 
+
+
 non_clinical = data[data$Population == "nicht-klinisch",]
 clinical = data[data$Population == "klinisch",]
 

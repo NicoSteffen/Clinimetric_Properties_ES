@@ -3,6 +3,7 @@ library(flextable)
 
 
 
+
 lmu = read.csv2("lmu.csv")
 #View(lmu)
 #names(lmu)
@@ -551,15 +552,42 @@ long_change <- long %>%
   ) %>%
   mutate(timepoint = paste0("t", timepoint))
 
+# Define new labels
+scale_labels <- c(
+  "BDI_total" = "BDI-II",
+  "ES_likert_total" = "ES-G Likert",
+  "ES_total" = "ES-G",
+  "WHO5_total" = "WHO-5"
+)
+
+means <- long_change %>%
+  group_by(variable, timepoint) %>%
+  summarise(mean_value = mean(value, na.rm = TRUE), .groups = "drop")
+
+
+
+ggplot(long_change, aes(x = timepoint, y = value, group = ID_Nummer)) +
+  geom_line(alpha = 0.3) +
+  geom_point(alpha = 0.5) +
+  stat_summary(fun = mean, geom = "line", aes(group = 1), color = "red", size = 1.2) +
+  facet_wrap(~ variable, scales = "free_y", labeller = as_labeller(scale_labels)) +
+  labs(
+    title = "Symptom Change Between t0 and t1",
+    x = "Timepoint",
+    y = "Score"
+  ) +
+  theme_minimal()
+
+
 # Schritt 2: Plot erstellen
 ggplot(long_change, aes(x = timepoint, y = value, group = ID_Nummer)) +
   geom_line(alpha = 0.3) +
   geom_point(alpha = 0.5) +
   facet_wrap(~ variable, scales = "free_y") +
   labs(
-    title = "Veränderung der Skalenwerte von t0 zu t1",
-    x = "Messzeitpunkt",
-    y = "Summenwert"
+    title = "Symptom change between t0 and t1",
+    x = "Timepoint",
+    y = "Score"
   ) +
   theme_minimal()
 
@@ -588,6 +616,11 @@ ggplot(summary_stats, aes(x = timepoint, y = mean, group = variable)) +
 
 
 
+
+
+             
+
+
 # Objective 6 -------------------------------------------------------------
 library(rsq)
 
@@ -607,7 +640,10 @@ summary(model_likert)
 rsq.partial(model_es, adj = FALSE)
 rsq.partial(model_likert, adj = FALSE)
 
+model = lm(BDI_change ~ t0_ES_total, data = long)
+summary(model)
 
+long$t0_ES_total
 
 model = lm(BDI_change ~ ES_likert_change_cent, data = long )
 summary(model)
