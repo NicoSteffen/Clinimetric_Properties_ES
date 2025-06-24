@@ -440,8 +440,11 @@ cor = data[, c("ES_total", "GSI", "WHOQOL_total", "CDRISC_total", "PWB_total", "
 descriptive_stats = data.frame(
   n = colSums(!is.na(cor)),
   M = sapply(cor, mean, na.rm = TRUE),
-  SD = sapply(cor, sd, na.rm = TRUE)
+  SD = sapply(cor, sd, na.rm = TRUE),
+  Skew = 
 )
+
+describe(cor)
 
 correlation_matrix = cor(cor, method = "spearman", use = "pairwise.complete.obs")
 
@@ -449,7 +452,7 @@ final_table = cbind(descriptive_stats,correlation_matrix )
 
 
 final_table <- roundallnumerics(final_table, 2)
-final_table = flextable(final_table)
+final_table = flextable::flextable(final_table)
 
 # p-values
 cor_results <- Hmisc::rcorr(as.matrix(cor))
@@ -486,10 +489,20 @@ for (varname in names(cor)) {
 par(mfrow = c(1, 1))
 
 
-
-
 car::leveneTest(ES_total ~ Population, data = data, center = "mean")
 car::leveneTest(ES_likert_total ~ Population, data = data, center = "mean")
+
+
+#alpha
+
+alpha_es = alpha(data[, grep("^ES_likert_", colnames(data))])$total$raw_alpha
+alpha_es_likert = alpha(data[, grep("^ES_likert_[1-9]$|^ES_likert_10$", 
+                                    colnames(data))])$total$raw_alpha
+alpha_BSI = alpha(data[, paste0("BSI_", 1:53)])$total$raw_alpha
+alpha_whoqol = alpha(data[, paste0("WHOQOL_", 1:26)])$total$raw_alpha
+alpha_cdrisc = alpha(data[, paste0("CDRISC_", 1:10)])$total$raw_alpha
+alpha_PWB = alpha(data[, paste0("PWB_", 1:18)])$total$raw_alpha
+alpha_bdi = alpha(data[, paste0("BDI_", 1:21)])$total$raw_alpha
 
 # Question 2 Rasch---------------------------------------------------------------
 
