@@ -331,7 +331,7 @@ lmu$MINI_Group <- ifelse(lmu$Mini_current_MDE == "None" & lmu$Mini_lifetime_MDE 
                                                ifelse(lmu$Mini_current_MDE == "Subthreshold Depression" & lmu$Mini_lifetime_MDE == "YES", "Group4: History of MDE + current subthreshold",
                                                       ifelse(lmu$Mini_current_MDE == "MDE" & lmu$Mini_lifetime_MDE == "YES", "Group5: History of MDE + current MDE", NA))))))
 
-# Optional: Als Faktor kodieren, um die Gruppen geordnet darzustellen
+
 lmu$MINI_Group <- factor(lmu$MINI_Group, levels = c("Group0: No history of MDE - healthy", 
                                                       "Group1: Full remission", 
                                                       "Group2: First subthreshold depressive episode", 
@@ -372,24 +372,6 @@ lmu$WHOQOL_total <- rowMeans(lmu[, c("WHOQOL_Physical_Health_Converted", "WHOQOL
 
 # PWB
 
-#lmu$PWB_1 <- dplyr::recode(lmu$PWB_1, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-#lmu$PWB_3 <- dplyr::recode(lmu$PWB_3, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-#lmu$PWB_5 <- dplyr::recode(lmu$PWB_5, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-#lmu$PWB_6 <- dplyr::recode(lmu$PWB_6, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-#lmu$PWB_8 <- dplyr::recode(lmu$PWB_8, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-#lmu$PWB_10 <- dplyr::recode(lmu$PWB_10, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-#lmu$PWB_11 <- dplyr::recode(lmu$PWB_11, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-#lmu$PWB_14 <- dplyr::recode(lmu$PWB_14, `1` = 6, `2` = 5, `3` = 4, `4` = 3, `5` = 2, `6` = 1)
-
-#lmu$PWB_Autonomy = rowSums(lmu[,c("PWB_1", "PWB_9", "PWB_17")])
-#lmu$PWB_Environmental_Mastery = rowSums(lmu[,c("PWB_2", "PWB_11", "PWB_18")])
-#lmu$PWB_Personal_Growth = rowSums(lmu[,c("PWB_4", "PWB_12", "PWB_14")])
-#lmu$PWB_Rositive_Relations = rowSums(lmu[,c("PWB_5", "PWB_10", "PWB_13")])
-#lmu$PWB_Purpose_of_life = rowSums(lmu[,c("PWB_6", "PWB_8", "PWB_15")])
-#lmu$PWB_Self_Acceptance = rowSums(lmu[,c("PWB_3", "PWB_7", "PWB_16")])
-
-#lmu$PWB_total = rowSums(lmu[,c("PWB_Autonomy", "PWB_Environmental_Mastery", "PWB_Personal_Growth","PWB_Rositive_Relations","PWB_Purpose_of_life", "PWB_Self_Acceptance"  )])
-
 # Leere Variablen mit NA erstellen (gleiche Länge wie lmu)
 lmu$PWB_Autonomy <- NA
 lmu$PWB_Environmental_Mastery <- NA
@@ -404,47 +386,47 @@ lmu$PWB_total <- NA
 #RISC, WHO
 lmu$CDRISC_total <- rowSums(lmu[, grep("^CDRISC_", colnames(lmu))], na.rm = TRUE)
 lmu$WHO_total = rowSums(lmu[, grep("WHO_[1-5]", colnames(lmu))], na.rm = TRUE) * 4
-# Erstellen der Variable ES_likert_WHO als Summe der letzten 5 ES_likert Items
-lmu$ES_likert_WHO <- rowSums(lmu[, c("ES_likert_6", "ES_likert_7", "ES_likert_8", "ES_likert_9", "ES_likert_10")], na.rm = TRUE)
 
-# Berechnung der GSI (Global Severity Index) als Mittelwert aller BSI-Items von 1 bis 53
+
+# GSI
 lmu$GSI <- rowMeans(lmu[, paste0("BSI_", 1:53)], na.rm = TRUE)
 
 
-# Berechnung der Summenwerte für die einzelnen BSI-Skalen
+# # Berechnung der Summenwerte für die einzelnen BSI-Skalen
+# 
+# # Somatisierung
+# lmu$BSI_Somatisierung <- rowSums(lmu[, c("BSI_2", "BSI_7", "BSI_23", "BSI_29", "BSI_30", "BSI_33", "BSI_37")], na.rm = TRUE)
+# 
+# # Zwanghaftigkeit
+# lmu$BSI_Zwanghaftigkeit <- rowSums(lmu[, c("BSI_5", "BSI_15", "BSI_26", "BSI_27", "BSI_32", "BSI_36")], na.rm = TRUE)
+# 
+# # Unsicherheit im Sozialkontakt
+# lmu$BSI_Sozialkontakt <- rowSums(lmu[, c("BSI_20", "BSI_21", "BSI_22", "BSI_42")], na.rm = TRUE)
+# 
+# # Depressivität
+# lmu$BSI_Depressivität <- rowSums(lmu[, c("BSI_9", "BSI_16", "BSI_17", "BSI_18", "BSI_35", "BSI_50")], na.rm = TRUE)
+# 
+# # Ängstlichkeit
+# lmu$BSI_Ängstlichkeit <- rowSums(lmu[, c("BSI_1", "BSI_12", "BSI_19", "BSI_38", "BSI_45", "BSI_49")], na.rm = TRUE)
+# 
+# # Aggressivität / Feindseligkeit
+# lmu$BSI_Aggressivität <- rowSums(lmu[, c("BSI_6", "BSI_13", "BSI_40", "BSI_41", "BSI_46")], na.rm = TRUE)
+# 
+# # Phobische Angst
+# lmu$BSI_Phobische_Angst <- rowSums(lmu[, c("BSI_8", "BSI_28", "BSI_31", "BSI_43", "BSI_47")], na.rm = TRUE)
+# 
+# # Paranoides Denken
+# lmu$BSI_Paranoides_Denken <- rowSums(lmu[, c("BSI_4", "BSI_10", "BSI_24", "BSI_48", "BSI_51")], na.rm = TRUE)
+# 
+# # Psychotizismus
+# lmu$BSI_Psychotizismus <- rowSums(lmu[, c("BSI_3", "BSI_14", "BSI_34", "BSI_44", "BSI_53")], na.rm = TRUE)
+# 
+# # Zusatzskala
+# lmu$BSI_Zusatz <- rowSums(lmu[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na.rm = TRUE)
+# 
+# # Datensatz clean speichern 
+# write.csv2(lmu, file = "cleanlmu_t0.csv", row.names = FALSE)
 
-# Somatisierung
-lmu$BSI_Somatisierung <- rowSums(lmu[, c("BSI_2", "BSI_7", "BSI_23", "BSI_29", "BSI_30", "BSI_33", "BSI_37")], na.rm = TRUE)
-
-# Zwanghaftigkeit
-lmu$BSI_Zwanghaftigkeit <- rowSums(lmu[, c("BSI_5", "BSI_15", "BSI_26", "BSI_27", "BSI_32", "BSI_36")], na.rm = TRUE)
-
-# Unsicherheit im Sozialkontakt
-lmu$BSI_Sozialkontakt <- rowSums(lmu[, c("BSI_20", "BSI_21", "BSI_22", "BSI_42")], na.rm = TRUE)
-
-# Depressivität
-lmu$BSI_Depressivität <- rowSums(lmu[, c("BSI_9", "BSI_16", "BSI_17", "BSI_18", "BSI_35", "BSI_50")], na.rm = TRUE)
-
-# Ängstlichkeit
-lmu$BSI_Ängstlichkeit <- rowSums(lmu[, c("BSI_1", "BSI_12", "BSI_19", "BSI_38", "BSI_45", "BSI_49")], na.rm = TRUE)
-
-# Aggressivität / Feindseligkeit
-lmu$BSI_Aggressivität <- rowSums(lmu[, c("BSI_6", "BSI_13", "BSI_40", "BSI_41", "BSI_46")], na.rm = TRUE)
-
-# Phobische Angst
-lmu$BSI_Phobische_Angst <- rowSums(lmu[, c("BSI_8", "BSI_28", "BSI_31", "BSI_43", "BSI_47")], na.rm = TRUE)
-
-# Paranoides Denken
-lmu$BSI_Paranoides_Denken <- rowSums(lmu[, c("BSI_4", "BSI_10", "BSI_24", "BSI_48", "BSI_51")], na.rm = TRUE)
-
-# Psychotizismus
-lmu$BSI_Psychotizismus <- rowSums(lmu[, c("BSI_3", "BSI_14", "BSI_34", "BSI_44", "BSI_53")], na.rm = TRUE)
-
-# Zusatzskala
-lmu$BSI_Zusatz <- rowSums(lmu[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na.rm = TRUE)
-
-# Datensatz clean speichern 
-write.csv2(lmu, file = "cleanlmu_t0.csv", row.names = FALSE)
 
 #relevant variables for characteristics table 
 
@@ -535,9 +517,13 @@ long$t0_WHO5_total <- rowSums(long[, grep("^t0_WHO5_", names(long))], na.rm = TR
 long$t1_WHO5_total <- rowSums(long[, grep("^t1_WHO5_", names(long))], na.rm = TRUE)*4
 
 
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(tibble)
+library(forcats)
 
-# Schritt 1: Daten in Long-Format bringen
+# to long format
 long_change <- long %>%
   select(ID_Nummer,
          t0_WHO5_total, t1_WHO5_total,
@@ -550,46 +536,47 @@ long_change <- long %>%
     names_pattern = "t(\\d)_(.*)",
     values_to = "value"
   ) %>%
-  mutate(timepoint = paste0("t", timepoint))
+  mutate(
+    timepoint = paste0("t", timepoint),
+    variable = factor(variable, levels = c("ES_total", "ES_likert_total", "WHO5_total", "BDI_total"))  # custom facet order
+  )
 
-# Define new labels
+
 scale_labels <- c(
-  "BDI_total" = "BDI-II",
-  "ES_likert_total" = "ES-G Likert",
   "ES_total" = "ES-G",
-  "WHO5_total" = "WHO-5"
+  "ES_likert_total" = "ES-G Likert",
+  "WHO5_total" = "WHO-5",
+  "BDI_total" = "BDI-II"
 )
 
-means <- long_change %>%
-  group_by(variable, timepoint) %>%
-  summarise(mean_value = mean(value, na.rm = TRUE), .groups = "drop")
 
+library(ggplot2)
+library(sysfonts)
+library(showtext)
 
+font_add_google(name = "Roboto", family = "Roboto")
+showtext_auto()
 
 ggplot(long_change, aes(x = timepoint, y = value, group = ID_Nummer)) +
   geom_line(alpha = 0.3) +
   geom_point(alpha = 0.5) +
-  stat_summary(fun = mean, geom = "line", aes(group = 1), color = "red", size = 1.2) +
-  facet_wrap(~ variable, scales = "free_y", labeller = as_labeller(scale_labels)) +
+  stat_summary(fun = mean, geom = "line", aes(group = 1), color = "darkgreen", size = 1.8) +
+  facet_wrap(~ variable, scales = "free_y", labeller = as_labeller(scale_labels), ncol = 2) +
   labs(
-    title = "Symptom Change Between t0 and t1",
     x = "Timepoint",
     y = "Score"
   ) +
-  theme_minimal()
+  theme_minimal(base_family = "Roboto") +
+  theme(
+    strip.text = element_text(face = "bold", size = 13),
+    axis.text = element_text(size = 12),          
+    axis.title = element_text(size = 13, face = "bold"),  
+    text = element_text(family = "Roboto")
+  )
 
 
-# Schritt 2: Plot erstellen
-ggplot(long_change, aes(x = timepoint, y = value, group = ID_Nummer)) +
-  geom_line(alpha = 0.3) +
-  geom_point(alpha = 0.5) +
-  facet_wrap(~ variable, scales = "free_y") +
-  labs(
-    title = "Symptom change between t0 and t1",
-    x = "Timepoint",
-    y = "Score"
-  ) +
-  theme_minimal()
+
+
 
 
 # Mittelwerte und Standardfehler berechnen
@@ -601,18 +588,6 @@ summary_stats <- long_change %>%
     .groups = "drop"
   )
 
-# Plot erstellen
-ggplot(summary_stats, aes(x = timepoint, y = mean, group = variable)) +
-  geom_line(aes(color = variable), size = 1) +
-  geom_point(aes(color = variable), size = 3) +
-  geom_errorbar(aes(ymin = mean - se, ymax = mean + se, color = variable), width = 0.1) +
-  labs(
-    title = "Mittelwertsverlauf der Skalen von t0 zu t1",
-    x = "Messzeitpunkt",
-    y = "Mittelwert (± SE)",
-    color = "Variable"
-  ) +
-  theme_minimal()
 
 
 
@@ -657,19 +632,17 @@ plot(model_es, 1, cex = 2) # passt
 plot(model_likert, 1, cex = 2) #passt
 
 
-es = t.test(long$t0_ES_total, long$t1_ES_total, data = long, var.equal = T)
-effectsize::cohens_d(es)
+es = t.test(long$t0_ES_total, long$t1_ES_total, data = long, paired = T)
+effectsize::repeated_measures_d(es, method = "rm")
 
-es_likert = t.test(long$t0_ES_likert_total, long$t1_ES_likert_total, data = long, var.equal = T)
-effectsize::cohens_d(es_likert)
+es_likert = t.test(long$t0_ES_likert_total, long$t1_ES_likert_total, data = long, paired = T)
+effectsize::repeated_measures_d(es_likert, method = "rm")
 
-who = t.test(long$t0_WHO5_total, long$t1_WHO5_total, data = long, var.equal = T)
-effectsize::cohens_d(who)
+who = t.test(long$t0_WHO5_total, long$t1_WHO5_total, data = long, paired = T)
+effectsize::repeated_measures_d(who, method = "rm")
 
-bdi = t.test(long$t0_BDI_total, long$t1_BDI_total, data = long, var.equal = T)
-effectsize::cohens_d(bdi)
-
-# gleiche effectsize im ES wie im WHO, ES likert nur .88, bdi 1.52
+bdi = t.test(long$t0_BDI_total, long$t1_BDI_total, data = long, paired = T)
+effectsize::repeated_measures_d(bdi, method = "rm")
 
 
 

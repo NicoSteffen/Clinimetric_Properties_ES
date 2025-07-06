@@ -65,7 +65,6 @@ data <- data[data$id != 1, ]
 
 #Number of participiants before exlusion: 
 
-#view(data)
 
 #remove ID with missing data
 data <- data[data$Teilnahmeerklaerung != 2, ]
@@ -77,7 +76,6 @@ data <- data[data$somatic != 1, ]
 data <- data[data$Schwanger != 1, ]
 
 #excludion of age > 75
-
 data <- data[data$age < 76, ]
 
 
@@ -93,20 +91,13 @@ data[data$id == 4, grep("^MINI_current_|^MINI_past_", colnames(data))] <-
 
 
 
-#Jetzt unnötige Variablen entfernen
-# Entferne die nicht benötigten Variablen
 data <- data[, !names(data) %in% c("v_205", "v_208", "Versuchspersonenstunden", "Teilnahmeerklaerung", "somatic", "Schwanger")]
 
 
 
 # sample characteristics --------------------------------------------------
 
-
-# Umkodierung in Faktor
 data$sex <- factor(data$sex, levels = c(1, 2, 3), labels = c("female", "male", "divers"))
-
-
-
 
 data$Beziehungsstatus <- factor(data$Beziehungsstatus, levels = c(1, 2, 3, 4, 5, 6, 7),
                                 labels = c("Verheiratet", "Verwitwet", "Geschieden", "Getrennt lebend", "Single",
@@ -139,7 +130,7 @@ data$Wohnsituation <- factor(data$Wohnsituation, levels = c(1, 2, 3, 4, 5),
 
 
 
-# characteristics erstellen 
+# df für characteristics erstellen 
 
 characteristics_non <- data[, c(
   "Population",
@@ -182,18 +173,14 @@ data <- data[, !names(data) %in% vars_to_remove]
 # Skalen umkodieren + aggregation ------------------------------------------------------
 
 
-
-
 # ES_dichotom
-
-
 
 data$ES_total <- rowSums(data[, grep("^ES_[1-9]$|^ES_10$", colnames(data))], na.rm = TRUE)
 
 
 # ES_likert
 
-# Umkodierung der ES_likert_ Variablen: 1 -> 0, 2 -> 1, 3 -> 2, 4 -> 3, 5 -> 4, 6 -> 5
+# Umkodieren
 data[, grep("^ES_likert_", colnames(data))] <- lapply(data[, grep("^ES_likert_", colnames(data))], function(x) {
   ifelse(x == 1, 0, ifelse(x == 2, 1, ifelse(x == 3, 2, ifelse(x == 4, 3, ifelse(x == 5, 4, ifelse(x == 6, 5, x))))))
 })
@@ -228,7 +215,6 @@ data$BDI_total = rowSums(data[, grep("BDI_", colnames(data))], na.rm = TRUE)
 
 #BDI Gruppierung
 
-# Erstellen der Gruppen basierend auf dem BDI_total Score
 data$BDI_Group <- cut(data$BDI_total, 
                       breaks = c(-Inf, 13, 19, 28, Inf), 
                       labels = c("Group0: no depression / clinical irrelevant", 
@@ -237,10 +223,7 @@ data$BDI_Group <- cut(data$BDI_total,
                                  "Group3: severe depression"), 
                       right = TRUE)
 
-#table(data$BDI_Group)
-#data$BDI_total
-
-# MINBDI_total# MINI Grouping
+# MINI
 
 data[, grep("^MINI_", colnames(data))] <- 
   lapply(data[, grep("^MINI_", colnames(data))], function(x) ifelse(x == 1, 0, ifelse(x == 2, 1, x)))
@@ -250,20 +233,19 @@ data[, grep("^MINI_", colnames(data))] <-
 mini_current_sum <- rowSums(data[, grep("^MINI_current_", colnames(data))], na.rm = TRUE)
 mini_past_sum <- rowSums(data[, grep("^MINI_past_", colnames(data))], na.rm = TRUE)
 
-# Codierung für Mini_lifetime_MDE (YES/NO)
+# Mini_lifetime_MDE (YES/NO)
 data$Mini_lifetime_MDE <- ifelse(mini_past_sum >= 0 & mini_past_sum <= 4, "NO", 
                                  ifelse(mini_past_sum >= 5 & mini_past_sum <= 9, "YES", NA))
 
-# Codierung für Mini_current_MDE (MDE/Subthreshold Depression/None)
+# Mini_current_MDE (MDE/Subthreshold Depression/None)
 data$Mini_current_MDE <- ifelse(mini_current_sum == 0, "None", 
                                 ifelse(mini_current_sum >= 1 & mini_current_sum <= 4, "Subthreshold Depression", 
                                        ifelse(mini_current_sum >= 5 & mini_current_sum <= 9, "MDE", NA)))
 
-# Als Faktoren codieren
 data$Mini_lifetime_MDE <- factor(data$Mini_lifetime_MDE, levels = c("NO", "YES"))
 data$Mini_current_MDE <- factor(data$Mini_current_MDE, levels = c("None", "Subthreshold Depression", "MDE"))
 
-# Erstellung der Gruppen basierend auf Mini_current_MDE und Mini_lifetime_MDE
+# Erstellung der Gruppen
 data$MINI_Group <- ifelse(data$Mini_current_MDE == "None" & data$Mini_lifetime_MDE == "NO", "Group0: No history of MDE - healthy",
                           ifelse(data$Mini_current_MDE == "None" & data$Mini_lifetime_MDE == "YES", "Group1: Full remission",
                                  ifelse(data$Mini_current_MDE == "Subthreshold Depression" & data$Mini_lifetime_MDE == "NO", "Group2: First subthreshold depressive episode",
@@ -271,14 +253,13 @@ data$MINI_Group <- ifelse(data$Mini_current_MDE == "None" & data$Mini_lifetime_M
                                                ifelse(data$Mini_current_MDE == "Subthreshold Depression" & data$Mini_lifetime_MDE == "YES", "Group4: History of MDE + current subthreshold",
                                                       ifelse(data$Mini_current_MDE == "MDE" & data$Mini_lifetime_MDE == "YES", "Group5: History of MDE + current MDE", NA))))))
 
-# Optional: Als Faktor kodieren, um die Gruppen geordnet darzustellen
+# Als Faktor und geordent (für jonkheres test)
 data$MINI_Group <- factor(data$MINI_Group, levels = c("Group0: No history of MDE - healthy", 
                                                       "Group1: Full remission", 
                                                       "Group2: First subthreshold depressive episode", 
                                                       "Group3: First depressive episode", 
                                                       "Group4: History of MDE + current subthreshold", 
-                                                      "Group5: History of MDE + current MDE"),
-                          ordered = TRUE)
+                                                      "Group5: History of MDE + current MDE"), ordered = TRUE)
 
 
 
@@ -351,8 +332,6 @@ data[, grep("^WHO_", colnames(data))] <- lapply(data[, grep("^WHO_", colnames(da
 data$WHO_total = rowSums(data[, grep("WHO_[1-5]", colnames(data))], na.rm = TRUE)
 data$WHO_total = data$WHO_total * 4
 
-# Erstellen der Variable ES_likert_WHO als Summe der letzten 5 ES_likert Items
-data$ES_likert_WHO <- rowSums(data[, c("ES_likert_6", "ES_likert_7", "ES_likert_8", "ES_likert_9", "ES_likert_10")], na.rm = TRUE)
 
 
 # BSI
@@ -367,37 +346,37 @@ data[, grep("^BSI_", colnames(data))] <- lapply(data[, grep("^BSI_", colnames(da
 data$GSI <- rowMeans(data[, paste0("BSI_", 1:53)], na.rm = TRUE)
 
 
-# Berechnung der Summenwerte für die einzelnen BSI-Skalen
-
-# Somatisierung
-data$BSI_Somatisierung <- rowSums(data[, c("BSI_2", "BSI_7", "BSI_23", "BSI_29", "BSI_30", "BSI_33", "BSI_37")], na.rm = TRUE)
-
-# Zwanghaftigkeit
-data$BSI_Zwanghaftigkeit <- rowSums(data[, c("BSI_5", "BSI_15", "BSI_26", "BSI_27", "BSI_32", "BSI_36")], na.rm = TRUE)
-
-# Unsicherheit im Sozialkontakt
-data$BSI_Sozialkontakt <- rowSums(data[, c("BSI_20", "BSI_21", "BSI_22", "BSI_42")], na.rm = TRUE)
-
-# Depressivität
-data$BSI_Depressivität <- rowSums(data[, c("BSI_9", "BSI_16", "BSI_17", "BSI_18", "BSI_35", "BSI_50")], na.rm = TRUE)
-
-# Ängstlichkeit
-data$BSI_Ängstlichkeit <- rowSums(data[, c("BSI_1", "BSI_12", "BSI_19", "BSI_38", "BSI_45", "BSI_49")], na.rm = TRUE)
-
-# Aggressivität / Feindseligkeit
-data$BSI_Aggressivität <- rowSums(data[, c("BSI_6", "BSI_13", "BSI_40", "BSI_41", "BSI_46")], na.rm = TRUE)
-
-# Phobische Angst
-data$BSI_Phobische_Angst <- rowSums(data[, c("BSI_8", "BSI_28", "BSI_31", "BSI_43", "BSI_47")], na.rm = TRUE)
-
-# Paranoides Denken
-data$BSI_Paranoides_Denken <- rowSums(data[, c("BSI_4", "BSI_10", "BSI_24", "BSI_48", "BSI_51")], na.rm = TRUE)
-
-# Psychotizismus
-data$BSI_Psychotizismus <- rowSums(data[, c("BSI_3", "BSI_14", "BSI_34", "BSI_44", "BSI_53")], na.rm = TRUE)
-
-# Zusatzskala
-data$BSI_Zusatz <- rowSums(data[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na.rm = TRUE)
+# # Berechnung der Summenwerte für die einzelnen BSI-Skalen
+# 
+# # Somatisierung
+# data$BSI_Somatisierung <- rowSums(data[, c("BSI_2", "BSI_7", "BSI_23", "BSI_29", "BSI_30", "BSI_33", "BSI_37")], na.rm = TRUE)
+# 
+# # Zwanghaftigkeit
+# data$BSI_Zwanghaftigkeit <- rowSums(data[, c("BSI_5", "BSI_15", "BSI_26", "BSI_27", "BSI_32", "BSI_36")], na.rm = TRUE)
+# 
+# # Unsicherheit im Sozialkontakt
+# data$BSI_Sozialkontakt <- rowSums(data[, c("BSI_20", "BSI_21", "BSI_22", "BSI_42")], na.rm = TRUE)
+# 
+# # Depressivität
+# data$BSI_Depressivität <- rowSums(data[, c("BSI_9", "BSI_16", "BSI_17", "BSI_18", "BSI_35", "BSI_50")], na.rm = TRUE)
+# 
+# # Ängstlichkeit
+# data$BSI_Ängstlichkeit <- rowSums(data[, c("BSI_1", "BSI_12", "BSI_19", "BSI_38", "BSI_45", "BSI_49")], na.rm = TRUE)
+# 
+# # Aggressivität / Feindseligkeit
+# data$BSI_Aggressivität <- rowSums(data[, c("BSI_6", "BSI_13", "BSI_40", "BSI_41", "BSI_46")], na.rm = TRUE)
+# 
+# # Phobische Angst
+# data$BSI_Phobische_Angst <- rowSums(data[, c("BSI_8", "BSI_28", "BSI_31", "BSI_43", "BSI_47")], na.rm = TRUE)
+# 
+# # Paranoides Denken
+# data$BSI_Paranoides_Denken <- rowSums(data[, c("BSI_4", "BSI_10", "BSI_24", "BSI_48", "BSI_51")], na.rm = TRUE)
+# 
+# # Psychotizismus
+# data$BSI_Psychotizismus <- rowSums(data[, c("BSI_3", "BSI_14", "BSI_34", "BSI_44", "BSI_53")], na.rm = TRUE)
+# 
+# # Zusatzskala
+# data$BSI_Zusatz <- rowSums(data[, c("BSI_11", "BSI_25", "BSI_39", "BSI_52")], na.rm = TRUE)
 
 
 non_variables = data[, c(
@@ -468,16 +447,14 @@ p_adj_matrix <- matrix(
 
 # normality tests:
 
-# Extract relevant variables
 cor <- data[, c("ES_total", "GSI", "WHOQOL_total", "CDRISC_total", "PWB_total", "BDI_total")]
 
-# Shapiro-Wilk tests for normality
 shapiro_results <- lapply(cor, shapiro.test)
 shapiro_results
 
 
 # Histograms and QQ plots
-par(mfrow = c(2, 2))  # 2x2 plotting grid; adjust if needed
+par(mfrow = c(2, 2))  
 
 for (varname in names(cor)) {
   hist(cor[[varname]], main = paste("Histogram of", varname), xlab = varname, col = "lightblue", breaks = 20)
@@ -485,7 +462,6 @@ for (varname in names(cor)) {
   qqline(cor[[varname]], col = "red")
 }
 
-# Reset plotting layout
 par(mfrow = c(1, 1))
 
 
@@ -504,18 +480,9 @@ alpha_cdrisc = alpha(data[, paste0("CDRISC_", 1:10)])$total$raw_alpha
 alpha_PWB = alpha(data[, paste0("PWB_", 1:18)])$total$raw_alpha
 alpha_bdi = alpha(data[, paste0("BDI_", 1:21)])$total$raw_alpha
 
-# Question 2 Rasch---------------------------------------------------------------
 
 
-
-
-# Question 3 Predict responder---------------------------------------------------------------
-
-
-# Question 4 ---------------------------------------------------------------
-
-
-# Question 5 ---------------------------------------------------------------
+# ANOVAs ---------------------------------------------------------------
 
 #Group 3 ausschließen da nicht in Japanese Study und nur 3 Pax!
 library(clinfun)
@@ -534,7 +501,7 @@ mini %>%
   games_howell_test(ES_total ~ MINI_Group)
 
 
-# 1. Create a function to calculate omega squared
+# function to calculate omega squared
 omega_sq_fn <- function(data, indices) {
   d <- data[indices, ]
   model <- aov(ES_total ~ MINI_Group, data = d)
@@ -542,16 +509,15 @@ omega_sq_fn <- function(data, indices) {
   return(est$Omega2)
 }
 
-# 2. Prepare your data frame
 df <- mini[!is.na(mini$ES_total) & !is.na(mini$MINI_Group), ]
 
-# 3. Run bootstrapping (e.g., 1000 resamples)
-set.seed(123)  # for reproducibility
+# bootstrapping 
+set.seed(123)  
 boot_omega <- boot(data = df, statistic = omega_sq_fn, R = 1000)
 
-# 4. View results
+
 boot_omega
-boot.ci(boot_omega, type = "perc")  # percentile CI
+boot.ci(boot_omega, type = "perc")  
 
 
 #likert
@@ -573,11 +539,11 @@ omega_sq_fn2 <- function(data, indices) {
   return(est$Omega2)
 }
 
-# 3. Run bootstrapping (e.g., 1000 resamples)
+# bootstrapping
 set.seed(123)  # for reproducibility
 boot_omega <- boot(data = df, statistic = omega_sq_fn2, R = 1000)
 
-# 4. View results
+
 boot_omega
 boot.ci(boot_omega, type = "perc")  # percentile CI
 
@@ -692,6 +658,11 @@ roc_nc = roc(non_clinical$depr, non_clinical$ES_total, smooth = F, auc = T, plot
 
 roc_c = roc(clinical$depr, clinical$ES_total, smooth = F, auc = T, plot = T )
 
+
+
+
+
+
 # Cutoff nach Youden's J
 coords(roc_nc, 
        x = "best", best.method = "youden", ret = c("threshold", "sensitivity", "specificity"))
@@ -704,7 +675,35 @@ coords(roc_c,
 coords(roc_c, x = 4, input = "threshold", ret = c("sensitivity", "specificity"))
 coords(roc_c, x = 5, input = "threshold", ret = c("sensitivity", "specificity"))
 
-ggroc(roc_nc)
+
+
+ggroc(roc_nc) +
+  geom_segment(aes(x = 1, y = 0, xend = 0, yend = 1), 
+               linetype = "dashed", color = "gray50") +
+  labs(title = "ROC Curve – Non-Clinical Sample",
+       x = "Specificity", y = "Sensitivity") +
+  theme_minimal(base_family = "Roboto") +
+  theme(
+    text = element_text(size = 16),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 18),
+    plot.title = element_text(face = "bold", size = 20, hjust = 0.5)
+  )
+
+ggroc(roc_c) +
+  geom_segment(aes(x = 1, y = 0, xend = 0, yend = 1), 
+               linetype = "dashed", color = "gray50") +
+  labs(title = "ROC Curve – Non-Clinical Sample",
+       x = "Specificity", y = "Sensitivity") +
+  theme_minimal(base_family = "Roboto") +
+  theme(
+    text = element_text(size = 16),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 18),
+    plot.title = element_text(face = "bold", size = 20, hjust = 0.5)
+  )
+
+
 
 
 # Question 8 ---------------------------------------------------------------
@@ -756,18 +755,6 @@ plot(es1, 1, cex = 2) #passt
 plot(es2, 1, cex = 2)
 
 describe(df$PWB_total)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

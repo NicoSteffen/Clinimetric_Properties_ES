@@ -144,10 +144,10 @@ data$WHO_responder = as.factor(data$WHO_responder)
 data$BDI_responder = as.factor(data$BDI_responder)
 
 measures = list(
-  mlr::bac,   # Balanced Accuracy
-  mlr::auc,   # Area Under the Curve
-  mlr::tpr,   # Sensitivity
-  mlr::tnr    # Specificity
+  mlr::bac,   
+  mlr::auc,   
+  mlr::tpr,   
+  mlr::tnr    
 )
 
 

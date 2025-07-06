@@ -1,3 +1,7 @@
+library(car)
+library(dplyr)
+library(tableone)
+
 #LMU
 
 lmu_char = read.csv2("characteristics_lmu.csv")
@@ -161,11 +165,8 @@ non_characteristics <- non_characteristics[, c(
 all_characteristics <- rbind(non_characteristics, lmu_characteristics)
 
 
-# Pakete laden
-library(dplyr)
-library(tableone)
 
-# Kategorische und metrische Variablen definieren
+
 cat_vars <- c("Sex", "Marital_status", "Household_income", 
               "Highest_educational_level", "Employment status")
 cont_vars <- c("Age", "ES_total", "ES_likert_total", "BDI_total", 
@@ -174,7 +175,7 @@ cont_vars <- c("Age", "ES_total", "ES_likert_total", "BDI_total",
                "PWB_Purpose_of_life", "PWB_Self_Acceptance", 
                "PWB_total", "CDRISC_total", "GSI", "WHO_total")
 
-# Tabelle erstellen
+# Tabellen
 table1 <- CreateTableOne(vars = c(cat_vars, cont_vars), 
                          strata = "Population", 
                          data = all_characteristics, 
@@ -184,8 +185,6 @@ table2 = CreateTableOne(vars = c(cat_vars, cont_vars),
                         data = all_characteristics, 
                         factorVars = cat_vars)
 
-
-# Tabelle anzeigen
 print(table1, showAllLevels = TRUE, quote = TRUE, noSpaces = TRUE)
 
 #statistical comparisons
@@ -235,10 +234,9 @@ wilcox.test(CDRISC_total ~ Population, data = all_characteristics)
 wilcox.test(GSI ~ Population, data = all_characteristics)
 wilcox.test(WHO_total ~ Population, data = all_characteristics)
 
-# Required package
-library(car)
 
-# Define your variables of interest
+
+
 vars <- c("ES_total", "ES_likert_total", "BDI_total", "WHOQOL_total",
           "CDRISC_total", "GSI", "WHO_total")
 
