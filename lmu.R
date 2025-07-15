@@ -8,7 +8,7 @@ lmu = read.csv2("lmu.csv")
 #View(lmu)
 #names(lmu)
 
-# Neue Variable "Population" erstellen und auf "nicht-klinisch" setzen
+# Neue Variable "Population" erstellen
 lmu$Population <- "klinisch"
 lmu <- lmu[, c("Population", setdiff(names(lmu), "Population"))]
 
