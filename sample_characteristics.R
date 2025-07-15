@@ -212,17 +212,17 @@ employment_table = table(all_characteristics$`Employment status`, all_characteri
 fisher.test(employment_table)
 
 #age
-wilcox.test(Age ~ Population, data = all_characteristics)
+t.test(Age ~ Population, data = all_characteristics)
 
 #tests for continuus data 
 
-t.test(ES_total ~ Population,all_characteristics, var.equal = T)
-t.test(ES_likert_total ~ Population,all_characteristics, var.equal = T)
-t.test(BDI_total ~ Population,all_characteristics, var.equal = T)
-t.test(WHOQOL_total ~ Population,all_characteristics, var.equal = T)
-t.test(CDRISC_total ~ Population,all_characteristics, var.equal = T)
-t.test(GSI ~ Population,all_characteristics, var.equal = T)
-t.test(WHO_total ~ Population,all_characteristics, var.equal = T)
+t.test(ES_total ~ Population,all_characteristics)
+t.test(ES_likert_total ~ Population,all_characteristics)
+t.test(BDI_total ~ Population,all_characteristics)
+t.test(WHOQOL_total ~ Population,all_characteristics)
+t.test(CDRISC_total ~ Population,all_characteristics)
+t.test(GSI ~ Population,all_characteristics)
+t.test(WHO_total ~ Population,all_characteristics)
 
 # non parametric? 
 
